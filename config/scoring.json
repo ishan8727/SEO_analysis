@@ -1,0 +1,34 @@
+{
+  "weights": { "gbp": 25, "reputation": 20, "competitive": 15, "webTech": 20, "onPage": 20 },
+  "grades": { "A": 85, "B": 70, "C": 55, "D": 40 },
+  "gbp": {
+    "hasWebsite": 20,
+    "hasPhone": 15,
+    "hasHours": 15,
+    "hasDescription": 10,
+    "photos": { "max": 20, "fullAt": 10 },
+    "isOperational": 10,
+    "hasPrimaryType": 10
+  },
+  "reputation": {
+    "ratingFloor": 3.5,
+    "ratingCeil": 5.0,
+    "ratingWeight": 0.4,
+    "volumeWeight": 0.35,
+    "recencyWeight": 0.15,
+    "sentimentWeight": 0.1,
+    "recencyDays": [30, 90]
+  },
+  "webTech": { "psiMobilePerf": 0.5, "psiDesktopPerf": 0.2, "basics": 0.3 },
+  "onPage": {
+    "title": 15,
+    "metaDescription": 10,
+    "h1": 10,
+    "localSchema": 15,
+    "napMatch": 20,
+    "altText": 10,
+    "contactLinks": 10,
+    "canonicalAndRobots": 10
+  },
+  "online": { "weights": { "webTech": 50, "onPage": 50 } }
+}

@@ -1,0 +1,114 @@
+// Source of truth: SPEC.md section 7. Phase 1 changes are listed in SPEC.md section 14.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ScanStatus {
+  queued
+  running
+  done
+  failed
+}
+
+enum ScanMode {
+  local
+  online
+}
+
+enum LeadRole {
+  owner
+  founder
+  marketing
+  agency
+  other
+}
+
+model Business {
+  id          String   @id @default(cuid())
+  placeId     String?  @unique
+  mode        ScanMode
+  name        String
+  websiteUrl  String?
+  address     String?
+  lat         Float?
+  lng         Float?
+  primaryType String?
+  scans       Scan[]
+  createdAt   DateTime @default(now())
+}
+
+model Scan {
+  id              String     @id // nanoid(21), unguessable
+  businessId      String
+  business        Business   @relation(fields: [businessId], references: [id])
+  status          ScanStatus @default(queued)
+  progress        Json       @default("{}") // ScanProgress in src/types.ts
+  placeSnapshot   Json? // PlaceSnapshot; Google data, purged after 30 days
+  gbp             Json? // GbpResult
+  competitors     Json? // CompetitorsResult
+  psi             Json? // PsiResult
+  domAudit        Json? // DomAuditResult
+  sentiment       Json? // SentimentResult
+  score           Json? // ScoreResult
+  error           String? // user-safe message when status = failed
+  ipHash          String
+  createdAt       DateTime   @default(now())
+  finishedAt      DateTime?
+  snapshotPurgeAt DateTime?
+  leads           Lead[]
+  assets          Asset[]
+
+  @@index([businessId, createdAt])
+  @@index([snapshotPurgeAt])
+}
+
+// Screenshots and PDFs. Stored in Postgres because a Railway volume can only be
+// mounted on one service, and both web (serves) and worker (writes) need them.
+model Asset {
+  id        String   @id @default(cuid())
+  scanId    String
+  scan      Scan     @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  kind      String // AssetKind in src/types.ts
+  mime      String
+  bytes     Bytes
+  createdAt DateTime @default(now())
+
+  @@unique([scanId, kind])
+  @@index([createdAt])
+}
+
+model Lead {
+  id            String         @id @default(cuid())
+  scanId        String
+  scan          Scan           @relation(fields: [scanId], references: [id])
+  phoneE164     String
+  role          LeadRole
+  verifiedAt    DateTime?
+  channel       String // "wa_inbound" | "wa_otp"
+  crmSyncedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  verifications Verification[]
+
+  @@index([phoneE164])
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  leadId     String
+  lead       Lead      @relation(fields: [leadId], references: [id])
+  codeHash   String // hashIdentifier(code), see src/lib/hash.ts
+  kind       String // "otp" | "inbound"
+  attempts   Int       @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([codeHash])
+  @@index([leadId])
+}

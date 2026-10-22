@@ -1,0 +1,63 @@
+# Full stack: docker compose up --build
+# Only web is published to the host. Moli, Redis and Postgres stay on the compose network.
+# For running Next/worker on the host instead, add docker-compose.dev.yml (see CLAUDE.md).
+# Memory limits are set per service on Railway (Phase 6), not here: rootless Podman on WSL rejects them.
+
+x-app: &app
+  image: local-seo-audit:local
+  build: .
+  env_file:
+    - path: .env
+      required: false
+  environment: &app-env
+    DATABASE_URL: postgresql://app:app@postgres:5432/seoaudit
+    REDIS_URL: redis://redis:6379
+    MOLI_URL: http://moli:9222
+  depends_on:
+    postgres: { condition: service_healthy }
+    redis: { condition: service_healthy }
+    moli: { condition: service_started }
+
+services:
+  web:
+    <<: *app
+    ports: ["3000:3000"]
+    environment:
+      <<: *app-env
+      SERVICE_NAME: web
+    command: sh -c "node_modules/.bin/prisma migrate deploy && node_modules/.bin/next start"
+
+  worker:
+    <<: *app
+    environment:
+      <<: *app-env
+      SERVICE_NAME: worker
+    command: node dist-worker/index.mjs
+
+  moli:
+    build: ./docker/moli
+    environment:
+      MOLI_TOKEN: ${MOLI_TOKEN:?set MOLI_TOKEN (16+ chars) in .env}
+    expose: ["9222"] # never publish in prod
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    volumes: [redis:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_USER: app, POSTGRES_PASSWORD: app, POSTGRES_DB: seoaudit }
+    volumes: [pg:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d seoaudit"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pg: {}
+  redis: {}

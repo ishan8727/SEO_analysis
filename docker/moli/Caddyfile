@@ -1,0 +1,37 @@
+{
+	admin off
+	auto_https off
+}
+
+:{$PORT} {
+	# Liveness probe, no token needed.
+	handle /health {
+		rewrite * /status
+		reverse_proxy 127.0.0.1:9223
+	}
+
+	@authed expression `{header.Authorization} == "Bearer {$MOLI_TOKEN}" || {header.Authorization} == "Basic {$MOLI_BASIC}" || {query.token} == "{$MOLI_TOKEN}"`
+
+	handle @authed {
+		# Moli advertises ws://127.0.0.1:9223; hand CDP clients this gate's address instead.
+		@version path /json/version /json/version/
+		route {
+			respond @version `{"Browser":"Chrome/145.0.0.0","Protocol-Version":"1.3","webSocketDebuggerUrl":"{ws}://{hostport}/devtools/browser/moli-browser{wsq}"}`
+			uri query -token
+			reverse_proxy 127.0.0.1:9223
+		}
+	}
+
+	handle {
+		respond "Unauthorized" 401
+	}
+
+	map {header.X-Forwarded-Proto} {ws} {
+		https wss
+		default ws
+	}
+	map {query.token} {wsq} {
+		"" ""
+		default ?token={query.token}
+	}
+}

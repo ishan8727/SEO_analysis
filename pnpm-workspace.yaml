@@ -1,0 +1,10 @@
+allowBuilds:
+  sharp: false
+  unrs-resolver: false
+  esbuild: true
+  "@prisma/engines": true
+  prisma: true
+  msgpackr-extract: false
+  protobufjs: false
+  "@google/genai": false
+  workerd: false

@@ -1,0 +1,50 @@
+import { z } from "zod";
+
+// Server-only configuration. Nothing here may be prefixed NEXT_PUBLIC_.
+// Parsed lazily so `next build` and unit tests don't need a full .env.
+const schema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  APP_URL: z.url().default("http://localhost:3000"),
+  DATABASE_URL: z.string().default(""),
+  REDIS_URL: z.string().default("redis://localhost:6379"),
+
+  // Secrets for hashing IPs/codes and signing unlock cookies.
+  HASH_SALT: z.string().min(16, "HASH_SALT must be at least 16 chars"),
+  COOKIE_SECRET: z.string().min(32, "COOKIE_SECRET must be at least 32 chars"),
+  INTERNAL_TOKEN: z.string().default(""),
+
+  GOOGLE_SERVER_KEY: z.string().default(""),
+  PSI_API_KEY: z.string().default(""),
+  GEMINI_API_KEY: z.string().default(""),
+  GEMINI_MODEL: z.string().default("gemini-flash-latest"),
+
+  MOLI_URL: z.string().default("http://localhost:9222"),
+  MOLI_TOKEN: z.string().default(""),
+
+  TURNSTILE_SECRET: z.string().default(""),
+
+  WHATSAPP_PROVIDER: z.enum(["meta", "interakt"]).default("meta"),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().default(""),
+  WHATSAPP_ACCESS_TOKEN: z.string().default(""),
+  WHATSAPP_VERIFY_TOKEN: z.string().default(""),
+  WHATSAPP_APP_SECRET: z.string().default(""),
+  WHATSAPP_OTP_TEMPLATE: z.string().default("otp_login"),
+  WHATSAPP_BUSINESS_NUMBER: z.string().default(""),
+
+  CRM_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
+
+  SCAN_CACHE_DAYS: z.coerce.number().int().positive().default(7),
+  DEFAULT_COUNTRY: z.string().length(2).default("IN"),
+});
+
+export type Env = z.infer<typeof schema>;
+
+let cached: Env | undefined;
+
+export function env(): Env {
+  cached ??= schema.parse(process.env);
+  return cached;
+}

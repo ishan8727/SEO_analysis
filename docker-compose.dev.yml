@@ -1,0 +1,10 @@
+# Local development only: publishes the backing services on 127.0.0.1 so `pnpm dev`,
+# `pnpm worker:dev`, `pnpm test` and `pnpm prisma migrate dev` can run on the host.
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis moli
+services:
+  postgres:
+    ports: ["127.0.0.1:5432:5432"]
+  redis:
+    ports: ["127.0.0.1:6379:6379"]
+  moli:
+    ports: ["127.0.0.1:9222:9222"]
