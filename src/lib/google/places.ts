@@ -11,9 +11,11 @@ export const PLACE_DETAILS_FIELDS = [
   "id",
   "displayName",
   "formattedAddress",
+  "addressComponents",
   "location",
   "websiteUri",
   "nationalPhoneNumber",
+  "internationalPhoneNumber",
   "rating",
   "userRatingCount",
   "reviews",
@@ -42,9 +44,11 @@ const placeDetailsSchema = z.object({
   id: z.string(),
   displayName: localizedText.optional(),
   formattedAddress: z.string().optional(),
+  addressComponents: z.array(z.object({ shortText: z.string().optional(), types: z.array(z.string()) })).optional(),
   location: z.object({ latitude: z.number(), longitude: z.number() }).optional(),
   websiteUri: z.string().optional(),
   nationalPhoneNumber: z.string().optional(),
+  internationalPhoneNumber: z.string().optional(),
   rating: z.number().optional(),
   userRatingCount: z.number().optional(),
   reviews: z
@@ -77,6 +81,8 @@ export function toPlaceSnapshot(raw: unknown, now = new Date()): PlaceSnapshot {
     location: p.location ? { lat: p.location.latitude, lng: p.location.longitude } : null,
     websiteUri: p.websiteUri ?? null,
     nationalPhoneNumber: p.nationalPhoneNumber ?? null,
+    internationalPhoneNumber: p.internationalPhoneNumber ?? null,
+    countryCode: p.addressComponents?.find((c) => c.types.includes("country"))?.shortText?.toUpperCase() ?? null,
     rating: p.rating ?? null,
     userRatingCount: p.userRatingCount ?? 0,
     reviews: (p.reviews ?? [])
@@ -118,7 +124,8 @@ async function placesFetch(url: string, fieldMask: string, body?: unknown): Prom
 }
 
 export async function getPlaceDetails(placeId: string): Promise<PlaceSnapshot> {
-  const url = `${PLACES_BASE}/places/${encodeURIComponent(placeId)}?languageCode=en&regionCode=${env().DEFAULT_COUNTRY}`;
+  // No regionCode: businesses can be in any country.
+  const url = `${PLACES_BASE}/places/${encodeURIComponent(placeId)}?languageCode=en`;
   return toPlaceSnapshot(await placesFetch(url, PLACE_DETAILS_FIELDS));
 }
 
@@ -222,7 +229,6 @@ export async function searchNearby(self: {
       circle: { center: { latitude: self.location.lat, longitude: self.location.lng }, radius: NEARBY_RADIUS_M },
     },
     languageCode: "en",
-    regionCode: env().DEFAULT_COUNTRY,
   });
   return toCompetitorsResult(raw, self);
 }

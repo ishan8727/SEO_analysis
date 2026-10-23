@@ -11,10 +11,8 @@ export const RATE_LIMITS = {
   scanCreatePlaceDay: { limit: 3, windowSec: 24 * 60 * 60 },
   scanStatusIp: { limit: 60, windowSec: 60 },
   assetIp: { limit: 120, windowSec: 60 },
-  verifyStartIp: { limit: 3, windowSec: 10 * 60 },
-  verifyStartPhone: { limit: 5, windowSec: 60 * 60 },
   verifyConfirmIp: { limit: 20, windowSec: 10 * 60 },
-  webhookIp: { limit: 600, windowSec: 60 },
+  verifyConfirmPhone: { limit: 10, windowSec: 60 * 60 },
 } as const;
 
 export type RateLimitName = keyof typeof RATE_LIMITS;

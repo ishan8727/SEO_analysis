@@ -51,3 +51,10 @@ export const TONE_STROKE: Record<Tone, string> = {
   ok: "stroke-amber-500",
   bad: "stroke-red-500",
 };
+
+/**
+ * The same colours as SVG attributes. Moli (the PDF renderer) ignores CSS classes on SVG shapes
+ * but honours attributes; browsers let the classes above win.
+ */
+export const TONE_HEX: Record<Tone, string> = { good: "#10b981", ok: "#f59e0b", bad: "#ef4444" };
+export const MUTED_HEX = "#f5f5f5";

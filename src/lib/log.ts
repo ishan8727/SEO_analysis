@@ -1,7 +1,7 @@
 import pino from "pino";
 
 // JSON logs only (no transports: they spawn worker threads that break under Next bundling).
-// Never log raw phone numbers, OTP codes, auth headers or Google review text.
+// Never log raw phone numbers, verification codes, ID tokens, auth headers or Google review text.
 export const log = pino({
   level: process.env.LOG_LEVEL ?? (process.env.NODE_ENV === "production" ? "info" : "debug"),
   base: { service: process.env.SERVICE_NAME ?? "web" },
@@ -12,6 +12,7 @@ export const log = pino({
       "code",
       "otp",
       "token",
+      "idToken",
       "authorization",
       "cookie",
       "*.phone",
@@ -19,6 +20,7 @@ export const log = pino({
       "*.code",
       "*.otp",
       "*.token",
+      "*.idToken",
       "*.authorization",
       "*.cookie",
       "headers.authorization",

@@ -31,6 +31,9 @@ export interface PlaceSnapshot {
   location: { lat: number; lng: number } | null;
   websiteUri: string | null;
   nationalPhoneNumber: string | null;
+  /** Optional: snapshots taken before the international pass don't have them. */
+  internationalPhoneNumber?: string | null; // "+44 20 7946 0958"
+  countryCode?: string | null; // ISO 3166-1 alpha-2 from addressComponents, e.g. "GB"
   rating: number | null;
   userRatingCount: number;
   reviews: PlaceReview[]; // Places returns at most 5
@@ -176,6 +179,8 @@ export interface ScanTeaser {
   mode: "local" | "online";
   progress: ScanProgress;
   business: { name: string; address: string | null; websiteUrl: string | null };
+  /** ISO country of the business from Google (null in online mode or after the snapshot purge). */
+  countryCode: string | null;
   score: Pick<ScoreResult, "total" | "grade" | "pillars" | "rank"> | null;
   /** While running: pillars whose steps have all ended (src/lib/scoring.ts partialPillars). */
   partialPillars?: Partial<Record<Pillar, number>>;
@@ -205,6 +210,7 @@ export type ApiErrorCode =
   | "CAPTCHA_FAILED"
   | "NOT_FOUND"
   | "SCAN_FAILED"
-  | "VERIFY_LOCKED"
+  | "VERIFY_FAILED"
+  | "COUNTRY_NOT_SUPPORTED"
   | "UNAUTHORIZED"
   | "INTERNAL";

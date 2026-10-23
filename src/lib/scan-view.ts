@@ -83,6 +83,7 @@ export function toTeaser(row: ScanRow): ScanTeaser {
     mode: row.business.mode,
     progress: row.progress as ScanProgress,
     business: { name: row.business.name, address: row.business.address, websiteUrl: row.business.websiteUrl },
+    countryCode: (row.placeSnapshot as unknown as PlaceSnapshot | null)?.countryCode ?? null,
     score: score && { total: score.total, grade: score.grade, pillars: score.pillars, rank: score.rank },
     screenshots: {
       ...(kinds.has("screenshot_mobile") && { mobile: assetUrl(row.id, "screenshot_mobile") }),

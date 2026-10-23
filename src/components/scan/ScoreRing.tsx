@@ -1,7 +1,7 @@
 import { cn } from "cn";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Grade } from "@/types";
-import { TONE_STROKE, TONE_TEXT, toneFor } from "./labels";
+import { MUTED_HEX, TONE_HEX, TONE_STROKE, TONE_TEXT, toneFor } from "./labels";
 
 const R = 52;
 const CIRCUMFERENCE = 2 * Math.PI * R;
@@ -15,13 +15,14 @@ export function ScoreRing({ score, grade, className }: { score: number | null; g
   return (
     <div className={cn("relative size-36", className)} role="img" aria-label={`Score ${score} out of 100, grade ${grade}`}>
       <svg viewBox="0 0 120 120" className="size-full -rotate-90">
-        <circle cx="60" cy="60" r={R} fill="none" strokeWidth="10" className="stroke-muted" />
+        <circle cx="60" cy="60" r={R} fill="none" strokeWidth="10" stroke={MUTED_HEX} className="stroke-muted" />
         <circle
           cx="60"
           cy="60"
           r={R}
           fill="none"
           strokeWidth="10"
+          stroke={TONE_HEX[tone]}
           strokeLinecap="round"
           strokeDasharray={CIRCUMFERENCE}
           strokeDashoffset={CIRCUMFERENCE * (1 - score / 100)}

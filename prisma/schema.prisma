@@ -84,31 +84,18 @@ model Asset {
 }
 
 model Lead {
-  id            String         @id @default(cuid())
-  scanId        String
-  scan          Scan           @relation(fields: [scanId], references: [id])
-  phoneE164     String
-  role          LeadRole
-  verifiedAt    DateTime?
-  channel       String // "wa_inbound" | "wa_otp"
-  crmSyncedAt   DateTime?
-  createdAt     DateTime       @default(now())
-  verifications Verification[]
+  id          String    @id @default(cuid())
+  scanId      String
+  scan        Scan      @relation(fields: [scanId], references: [id])
+  phoneE164   String // from a verified Firebase phone ID token; never logged
+  countryCode String? // ISO country of the phone number
+  role        LeadRole
+  verifiedAt  DateTime?
+  channel     String // "firebase_sms"
+  firebaseUid String?
+  crmSyncedAt DateTime? // CRM push is deferred; null until then
+  createdAt   DateTime  @default(now())
 
+  @@unique([scanId, phoneE164])
   @@index([phoneE164])
-}
-
-model Verification {
-  id         String    @id @default(cuid())
-  leadId     String
-  lead       Lead      @relation(fields: [leadId], references: [id])
-  codeHash   String // hashIdentifier(code), see src/lib/hash.ts
-  kind       String // "otp" | "inbound"
-  attempts   Int       @default(0)
-  expiresAt  DateTime
-  consumedAt DateTime?
-  createdAt  DateTime  @default(now())
-
-  @@index([codeHash])
-  @@index([leadId])
 }

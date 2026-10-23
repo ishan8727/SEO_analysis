@@ -10,7 +10,10 @@ x-app: &app
     args:
       NEXT_PUBLIC_GOOGLE_BROWSER_KEY: ${NEXT_PUBLIC_GOOGLE_BROWSER_KEY:-}
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
-      DEFAULT_COUNTRY: ${DEFAULT_COUNTRY:-IN}
+      NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:-}
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:-}
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: ${NEXT_PUBLIC_FIREBASE_PROJECT_ID:-}
+      NEXT_PUBLIC_PHONE_COUNTRIES: ${NEXT_PUBLIC_PHONE_COUNTRIES:-}
       ONLINE_MODE: ${ONLINE_MODE:-on}
   env_file:
     - path: .env
@@ -19,6 +22,7 @@ x-app: &app
     DATABASE_URL: postgresql://app:app@postgres:5432/seoaudit
     REDIS_URL: redis://redis:6379
     MOLI_URL: http://moli:9222
+    INTERNAL_APP_URL: http://web:3000 # worker → print page for the PDF
   depends_on:
     postgres: { condition: service_healthy }
     redis: { condition: service_healthy }

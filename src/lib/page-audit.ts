@@ -1,3 +1,4 @@
+import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 import * as cheerio from "cheerio";
 import type { DomAuditResult } from "@/types";
 
@@ -36,8 +37,21 @@ const ORDERING_RE =
   /\b(order (online|now|here)|buy now|add to (cart|bag)|shop now|place (an |your )?order|home delivery|online delivery|cart|checkout)\b/i;
 const BOOKING_RE =
   /\b(book (now|online|a table|an? appointment|a consultation)|make an appointment|schedule (an? )?(appointment|visit|consultation)|reserve (a table|now)|reservations?|appointments?)\b/i;
-const ORDERING_HOSTS = ["swiggy.com", "zomato.com", "magicpin.in", "dunzo.com"];
-const BOOKING_HOSTS = ["practo.com", "calendly.com", "booksy.com", "fresha.com", "lybrate.com", "dineout.co.in"];
+// Third-party ordering/booking sites, international. Subdomains match too.
+const ORDERING_HOSTS = [
+  "swiggy.com", "zomato.com", "magicpin.in", "dunzo.com", // IN
+  "ubereats.com", "doordash.com", "grubhub.com", "postmates.com", "seamless.com", "toasttab.com", // US
+  "deliveroo.com", "deliveroo.co.uk", "just-eat.co.uk", "just-eat.com", "lieferando.de", "thuisbezorgd.nl", "wolt.com", "glovoapp.com", // EU/UK
+  "talabat.com", "noon.com", "careem.com", "foodpanda.com", "grab.com", "menulog.com.au", "skipthedishes.com", // ME/APAC/CA
+  "order.online", "square.site", "shopify.com", "orderyoyo.com",
+];
+const BOOKING_HOSTS = [
+  "practo.com", "lybrate.com", "dineout.co.in", // IN
+  "calendly.com", "booksy.com", "fresha.com", "treatwell.com", "treatwell.co.uk", "vagaro.com", "mindbodyonline.com",
+  "setmore.com", "acuityscheduling.com", "squareup.com", "simplybook.me", "schedulicity.com", "styleseat.com",
+  "opentable.com", "opentable.co.uk", "resy.com", "sevenrooms.com", "thefork.com", "quandoo.com", "tock.com",
+  "zocdoc.com", "doctolib.fr", "doctolib.de", "healthengine.com.au", "hotdoc.com.au", "jameda.de",
+];
 
 export type PageFacts = Omit<DomAuditResult, "renderer" | "finalUrl" | "httpStatus" | "robotsTxt" | "sitemapXml" | "napMatch">;
 
@@ -161,7 +175,11 @@ export function extractPage(html: string, pageUrl: string): { facts: PageFacts; 
 
 /* ---------- NAP match (local mode) ---------- */
 
-const NAP_STOPWORDS = new Set(["the", "and", "of", "pvt", "ltd", "private", "limited", "india", "co"]);
+// Legal-form suffixes and filler words that differ between a Google listing and a website.
+const NAP_STOPWORDS = new Set(
+  `the and of co pvt ltd private limited llp inc llc corp corporation plc pty gmbh ag kg ug sarl sas sa bv nv srl spa
+  ab oy as aps kft sro sp zoo`.split(/\s+/),
+);
 
 function tokens(s: string): string[] {
   return s
@@ -181,12 +199,53 @@ function tokenOverlap(reference: string | null, page: Set<string>): number | nul
   return Math.round((found / ref.size) * 100) / 100;
 }
 
-/** 1 if the page shows the same number (compared on the last 10 digits); null without a reference. */
-function phoneMatch(reference: string | null, pageText: string): number | null {
-  const ref = (reference ?? "").replace(/\D/g, "").slice(-10);
-  if (ref.length < 6) return null;
-  const candidates = pageText.match(/\+?\d[\d\s().-]{5,}\d/g) ?? [];
-  return candidates.some((c) => c.replace(/\D/g, "").slice(-10) === ref) ? 1 : 0;
+/**
+ * The national significant number of Google's phone ("+49 30 1234567" → "301234567"), without the country
+ * code or trunk prefix. Falls back to the digits without leading zeros when the number can't be parsed.
+ */
+function nationalDigits(place: NapPlace): string | null {
+  const country = (place.countryCode ?? undefined) as CountryCode | undefined;
+  for (const raw of [place.internationalPhoneNumber, place.nationalPhoneNumber]) {
+    if (!raw) continue;
+    const parsed = parsePhoneNumberFromString(raw, country);
+    if (parsed) return parsed.nationalNumber;
+  }
+  const digits = (place.nationalPhoneNumber ?? "").replace(/\D/g, "").replace(/^0+/, "");
+  return digits || null;
+}
+
+/**
+ * 1 if the page shows the same number; null without a reference. A page number matches when its digits end
+ * with the national number and what comes before is at most a country code / trunk prefix
+ * ("+49 (0)30 …", "0049 30 …", "030 …" all match "301234567").
+ */
+function phoneMatch(place: NapPlace, pageText: string): number | null {
+  const ref = nationalDigits(place);
+  if (!ref || ref.length < 6) return null;
+  // "/" joins German-style numbers ("030/1234567"); " / " separates two numbers.
+  const candidates = (pageText.match(/\+?\d[\d\s().\/-]{5,}\d/g) ?? []).flatMap((c) => c.split(" / "));
+  return candidates.some((c) => {
+    const digits = c.replace(/\D/g, "");
+    return digits.endsWith(ref) && digits.length - ref.length <= 5;
+  })
+    ? 1
+    : 0;
+}
+
+/** Google ends formattedAddress with the country ("…, 560038, India"); sites rarely repeat it. */
+function withoutCountry(place: NapPlace): string | null {
+  if (!place.formattedAddress || !place.countryCode) return place.formattedAddress;
+  const parts = place.formattedAddress.split(",");
+  return parts.length > 1 ? parts.slice(0, -1).join(",") : place.formattedAddress;
+}
+
+/** The Google profile fields NAP compares against (a PlaceSnapshot fits). */
+export interface NapPlace {
+  name: string;
+  formattedAddress: string | null;
+  nationalPhoneNumber: string | null;
+  internationalPhoneNumber?: string | null;
+  countryCode?: string | null;
 }
 
 /**
@@ -195,13 +254,13 @@ function phoneMatch(reference: string | null, pageText: string): number | null {
  */
 export function napMatch(
   pageText: string,
-  place: { name: string; formattedAddress: string | null; nationalPhoneNumber: string | null },
+  place: NapPlace,
 ): NonNullable<DomAuditResult["napMatch"]> {
   const page = new Set(tokens(pageText));
   const parts = {
     name: tokenOverlap(place.name, page),
-    address: tokenOverlap(place.formattedAddress, page),
-    phone: phoneMatch(place.nationalPhoneNumber, pageText),
+    address: tokenOverlap(withoutCountry(place), page),
+    phone: phoneMatch(place, pageText),
   };
   const known = Object.values(parts).filter((v): v is number => v !== null);
   const score = known.length ? Math.round((known.reduce((a, b) => a + b, 0) / known.length) * 100) / 100 : 0;

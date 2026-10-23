@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
 // Business search with Places Autocomplete (New) via the Maps JS SDK.
-// Browser key only (NEXT_PUBLIC_GOOGLE_BROWSER_KEY). One session token per search:
+// Worldwide: no includedRegionCodes, so Google ranks results near the visitor (IP biasing). The business's
+// country comes from Place Details (PlaceSnapshot.countryCode). Browser key only (NEXT_PUBLIC_GOOGLE_BROWSER_KEY). One session token per search:
 // it starts with the first keystroke and ends with fetchFields on the picked place.
 
 export interface PickedPlace {
@@ -35,12 +36,10 @@ function loadPlaces(): Promise<google.maps.PlacesLibrary> {
 }
 
 export function PlacesSearch({
-  country,
   primaryTypes,
   disabled,
   onPick,
 }: {
-  country: string;
   primaryTypes: string[];
   disabled?: boolean;
   onPick: (place: PickedPlace) => void;
@@ -72,7 +71,6 @@ export function PlacesSearch({
         const { suggestions: results } = await places.AutocompleteSuggestion.fetchAutocompleteSuggestions({
           input,
           sessionToken: sessionToken.current,
-          includedRegionCodes: [country],
           ...(primaryTypes.length ? { includedPrimaryTypes: primaryTypes } : {}),
           language: "en",
         });

@@ -1,16 +1,16 @@
 import { cn } from "cn";
-import { Check, Download, Minus, ThumbsDown, ThumbsUp, X } from "lucide-react";
+import { Check, Minus, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { FixList } from "@/components/scan/FixList";
 import { PillarBars } from "@/components/scan/PillarBars";
 import { ScoreRing } from "@/components/scan/ScoreRing";
 import { Screenshots } from "@/components/scan/Screenshots";
 import { TONE_TEXT, toneFor } from "@/components/scan/labels";
-import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { rankTable } from "@/lib/scoring";
 import type { DomAuditResult, GbpResult, PsiResult, PsiStrategyResult, ScanReport, SentimentResult, StepState } from "@/types";
 import { CompetitorMap, type MapPin } from "./CompetitorMap";
+import { PdfButton } from "./PdfButton";
 
 // The full report. Server-renderable; the print page (Phase 5) reuses it for the PDF.
 
@@ -33,13 +33,9 @@ export function ReportView({ report }: { report: ScanReport }) {
           <ScoreRing score={report.score?.total ?? null} grade={report.score?.grade ?? null} className="shrink-0" />
           <PillarBars pillars={report.score?.pillars ?? {}} mode={report.mode} />
         </CardContent>
-        {report.pdfUrl && (
-          <CardContent className="print:hidden">
-            <a href={report.pdfUrl} className={buttonVariants({ variant: "outline" })}>
-              <Download aria-hidden /> Download PDF
-            </a>
-          </CardContent>
-        )}
+        <CardContent className="print:hidden">
+          <PdfButton scanId={report.id} pdfUrl={report.pdfUrl} />
+        </CardContent>
       </Card>
 
       <Section title="What to fix first" description="Ranked by points gained for the effort. Points are out of 100.">
@@ -51,7 +47,8 @@ export function ReportView({ report }: { report: ScanReport }) {
       </Section>
 
       {(report.screenshots.mobile || report.screenshots.desktop) && (
-        <Section title="Your homepage" description="As Google's speed test saw it.">
+        // Not in the PDF: Moli (the PDF renderer) loads raster images but doesn't paint them.
+        <Section title="Your homepage" description="As Google's speed test saw it." className="print:hidden">
           <Screenshots shots={report.screenshots} psiState="done" />
         </Section>
       )}
@@ -64,9 +61,19 @@ export function ReportView({ report }: { report: ScanReport }) {
   );
 }
 
-function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
+function Section({
+  title,
+  description,
+  className,
+  children,
+}: {
+  title: string;
+  description?: string;
+  className?: string;
+  children: ReactNode;
+}) {
   return (
-    <Card className="break-inside-avoid">
+    <Card className={cn("break-inside-avoid", className)}>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <CardDescription>{description}</CardDescription>}

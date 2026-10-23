@@ -24,20 +24,20 @@ The browser calls Google Places directly for autocomplete. Everything else goes 
 | Deep DOM audit + PDF | Moli headless browser (Rust, CDP) in our own container behind a Caddy token gate, driven by playwright-core; fallback to fetch + cheerio | ~15 MB idle; fallback covers rendering gaps |
 | Competitors | Places Nearby Search | No scraping of Google properties, ever |
 | Review sentiment | Gemini Flash-Lite via `@google/genai` (structured JSON output), pinned in `GEMINI_MODEL` | Fractions of a paisa per audit |
-| Lead gate | WhatsApp click-to-chat (user-initiated, free) with OTP-template fallback; provider interface so Meta Cloud API or Interakt can be swapped | Free path first |
+| Lead gate | Firebase Phone Auth (SMS code) in the browser; server verifies the Firebase ID token with `firebase-admin`; report unlocks on the page with a PDF download | Works on web; billed per SMS by destination country (~$0.07 India, ~$0.01 US, ~$0.04 UK), first 10/day free (Blaze plan); no Meta setup |
 | Map on report | Leaflet + OpenStreetMap tiles | No Google Maps JS billing or key exposure |
 | Files (screenshots, PDFs) | `Asset` table in Postgres | A Railway volume mounts on one service only; web and worker both need the files |
 | Hosting | Railway, one project: web + worker (same image, different start commands), moli, Railway Redis + Postgres | Cheapest managed option; local dev identical via compose |
-| Target market (assumed) | India first, all local business categories via a dropdown; "Online only" mode for non-local | Confirm in section 13 |
+| Target market | International: any country (worldwide business search ranked near the visitor by IP; the business's country comes from Google's `addressComponents`), all local business categories via a dropdown; "Online only" mode for non-local | Decided 2026-10-23; `DEFAULT_COUNTRY` is only the phone gate's last-resort default |
 
-**Places pricing note.** Google bills each call at the highest tier of any field in its field mask. The Details mask in Phase 2 includes `websiteUri`, `nationalPhoneNumber`, `rating`, `userRatingCount`, `regularOpeningHours` (Enterprise) and `reviews`, `editorialSummary` (Enterprise + Atmosphere). The Nearby Search mask includes `rating`, `userRatingCount`, `websiteUri` (Enterprise). Free monthly caps for those tiers are lower than the Essentials/Pro caps. Check current India pricing before launch and trim fields if needed.
+**Places pricing note.** Google bills each call at the highest tier of any field in its field mask. The Details mask in Phase 2 includes `websiteUri`, `nationalPhoneNumber`, `rating`, `userRatingCount`, `regularOpeningHours` (Enterprise) and `reviews`, `editorialSummary` (Enterprise + Atmosphere). The Nearby Search mask includes `rating`, `userRatingCount`, `websiteUri` (Enterprise). Free monthly caps for those tiers are lower than the Essentials/Pro caps. Check current pricing before launch and trim fields if needed.
 
 ## 2. Stack and external services
 
-- Node 22, pnpm 12, Next.js 16.4, TypeScript strict, Prisma 7.10, BullMQ, ioredis, zod 4, playwright-core, cheerio, libphonenumber-js, pino, nanoid, `@google/genai`, leaflet/react-leaflet, shadcn/ui, undici + ipaddr.js (SSRF guard), vitest, tsup, tsx.
-- Google Cloud project: enable Maps JavaScript API, Places API (New), PageSpeed Insights API. Two keys: `NEXT_PUBLIC_GOOGLE_BROWSER_KEY` (referrer-restricted, Maps JS + Places only) and `GOOGLE_SERVER_KEY` (IP-restricted to Railway egress, Places + PSI). Billing account set to India.
+- Node 22, pnpm 12, Next.js 16.4, TypeScript strict, Prisma 7.10, BullMQ, ioredis, zod 4, playwright-core, cheerio, libphonenumber-js, firebase (client) + firebase-admin (server), pino, nanoid, `@google/genai`, leaflet/react-leaflet, shadcn/ui, undici + ipaddr.js (SSRF guard), vitest, tsup, tsx.
+- Google Cloud project: enable Maps JavaScript API, Places API (New), PageSpeed Insights API. Two keys: `NEXT_PUBLIC_GOOGLE_BROWSER_KEY` (referrer-restricted, Maps JS + Places only) and `GOOGLE_SERVER_KEY` (IP-restricted to Railway egress, Places + PSI). One billing account for Maps, Firebase and Gemini.
 - Gemini API key (AI Studio).
-- WhatsApp: Meta Cloud API app with a phone number, webhook verify token, and one approved authentication template (fallback OTP). Or Interakt credentials; both behind the same interface.
+- Firebase project (Blaze plan) on the same GCP project: Phone sign-in enabled, SMS region policy = Allow list of the countries we sell to (same list as `NEXT_PUBLIC_PHONE_COUNTRIES`), production domain in Authorized domains (`audit.thesalesinc.com`; `localhost` isn't allowed for phone auth, so the gate is tested live after deploy), test phone numbers, budget alert. Web config (`apiKey`, `authDomain`, `projectId`) is public.
 - Cloudflare Turnstile site + secret key.
 
 ## 3. Repository structure
@@ -71,9 +71,7 @@ The browser calls Google Places directly for autocomplete. Everything else goes 
 │   │       ├── scans/route.ts                    # POST create (Phase 2)
 │   │       ├── scans/[id]/route.ts               # GET status + teaser/report (Phase 4)
 │   │       ├── scans/[id]/assets/[kind]/route.ts # GET screenshot/PDF bytes (Phase 4)
-│   │       ├── verify/start/route.ts             # POST phone + role → code (Phase 5)
-│   │       ├── verify/confirm/route.ts           # POST OTP (Phase 5)
-│   │       ├── webhooks/whatsapp/route.ts        # GET verify, POST inbound (Phase 5)
+│   │       ├── verify/confirm/route.ts           # POST Firebase ID token → unlock cookie (Phase 5)
 │   │       └── health/route.ts                   # Phase 1
 │   ├── components/              # shadcn ui/ + ScanProgress, ScoreRing, PillarBars, CompetitorMap, Gate
 │   ├── lib/
@@ -93,13 +91,12 @@ The browser calls Google Places directly for autocomplete. Everything else goes 
 │   │   ├── google/psi.ts        # Phase 3
 │   │   ├── gemini.ts            # Phase 3
 │   │   ├── scoring.ts           # Phase 4: pure functions, reads config/scoring.json
-│   │   ├── otp.ts               # Phase 5
-│   │   ├── crm.ts               # Phase 5
-│   │   └── whatsapp/{index,meta,interakt}.ts  # Phase 5
+│   │   ├── firebase-admin.ts    # Phase 5: verifyPhoneIdToken()
+│   │   ├── crm.ts               # later (CRM deferred)
 │   └── worker/
 │       ├── index.ts             # BullMQ Worker bootstrap, job routing
 │       └── jobs/                # ping, gbp, competitors, psi, dom-audit, sentiment, finalize, pdf, retention
-└── tests/                       # vitest: rate-limit, ssrf, unlock (+ scoring, otp in later phases)
+└── tests/                       # vitest: rate-limit, ssrf, unlock (+ scoring, firebase token checks in later phases)
 ```
 
 ## 4. CLAUDE.md
@@ -121,7 +118,7 @@ Both are in the repo. `.env.example` lists every variable with comments; copy it
 
 ## 7. Data model
 
-`prisma/schema.prisma` is the source of truth: `Business`, `Scan`, `Asset`, `Lead`, `Verification`. The shapes of `Scan`'s Json columns (`progress`, `placeSnapshot`, `gbp`, `competitors`, `psi`, `domAudit`, `sentiment`, `score`) are defined in `src/types.ts`. Scan ids are `nanoid(21)`. Screenshots and PDFs live in `Asset` (`@@unique([scanId, kind])`), not on disk.
+`prisma/schema.prisma` is the source of truth: `Business`, `Scan`, `Asset`, `Lead` (`Verification` is dropped in Phase 5; Firebase holds code state). The shapes of `Scan`'s Json columns (`progress`, `placeSnapshot`, `gbp`, `competitors`, `psi`, `domAudit`, `sentiment`, `score`) are defined in `src/types.ts`. Scan ids are `nanoid(21)`. Screenshots and PDFs live in `Asset` (`@@unique([scanId, kind])`), not on disk.
 
 ## 8. API contracts
 
@@ -130,32 +127,29 @@ Both are in the repo. `.env.example` lists every variable with comments; copy it
 | POST /api/scans | `{ mode: "local", placeId, turnstileToken }` or `{ mode: "online", url, turnstileToken }` | `{ scanId }` (existing id if a scan of the same business is newer than SCAN_CACHE_DAYS) | 5/min/IP, 30/day/IP, 3/day per placeId |
 | GET /api/scans/:id | — | `ScanTeaser` while running/locked; `ScanReport` if the request carries a valid unlock cookie for this scan | 60/min/IP |
 | GET /api/scans/:id/assets/:kind | kind ∈ screenshot_mobile, screenshot_desktop, pdf | image/PDF bytes; pdf requires the unlock cookie | 120/min/IP |
-| POST /api/verify/start | `{ scanId, phone, role }` | `{ method: "wa_inbound", waLink, code }` or `{ method: "wa_otp" }` | 3/10min/IP, 5/hour/phone |
-| POST /api/verify/confirm | `{ scanId, phone, code }` | sets httpOnly signed cookie `unlock_<scanId>`; `{ ok: true }` | 5 attempts per verification, then locked 15 min; 20/10min/IP |
-| GET/POST /api/webhooks/whatsapp | Meta verify handshake / inbound messages | 200 | signature check with WHATSAPP_APP_SECRET |
+| POST /api/verify/confirm | `{ scanId, role, idToken }` (Firebase ID token from phone sign-in) | sets httpOnly signed cookie `unlock_<scanId>`; `{ ok: true }`; 401 `VERIFY_FAILED` for a bad, stale (>5 min) or non-phone token; 403 `COUNTRY_NOT_SUPPORTED` | 20/10min/IP, 10/hour/phone |
 | GET /api/health | — | `{ db, redis, moli }` each "ok" or "down"; 503 if any is down | none (Railway health checks) |
 
 All limits live in `RATE_LIMITS` in `src/lib/rate-limit.ts`. Errors: 429 `{ code: "RATE_LIMITED" }` with Retry-After, 400 `{ code: "INVALID_INPUT" }`, 403 `{ code: "CAPTCHA_FAILED" }`, 404 `{ code: "NOT_FOUND" }`, 500 `{ code: "SCAN_FAILED" }`. Owner-style copy on the client: 429 → "Woah, slow down. Try again in a few minutes."
 
 ## 9. Live scan UX contract
 
-The scan page polls GET /api/scans/:id every 2 s (back off to 5 s after 30 s). Progress keys and the UI step they drive: `gbp` → "Reading your Google profile", `competitors` → "Finding nearby competitors", `psi` → "Testing your website speed", `dom` → "Checking on-page SEO", `sentiment` → "Reading your reviews", `finalize` → "Calculating score". Step states: pending, running, done, failed, skipped. Teaser reveals as each finishes: score ring, pillar bars, both screenshots, "You rank #N of M nearby". Locked (blurred, pointer-events: none): competitor names, fix checklist, sentiment detail. Gate card: role select → phone input → "Verify on WhatsApp" button (opens `wa.me/<number>?text=AUDIT <code>`) + "Send me a code instead" link.
+The scan page polls GET /api/scans/:id every 2 s (back off to 5 s after 30 s). Progress keys and the UI step they drive: `gbp` → "Reading your Google profile", `competitors` → "Finding nearby competitors", `psi` → "Testing your website speed", `dom` → "Checking on-page SEO", `sentiment` → "Reading your reviews", `finalize` → "Calculating score". Step states: pending, running, done, failed, skipped. Teaser reveals as each finishes: score ring, pillar bars, both screenshots, "You rank #N of M nearby". Locked (blurred, pointer-events: none): competitor names, fix checklist, sentiment detail. Gate card: role select → phone input → "Send code" (Firebase SMS, invisible reCAPTCHA) → 6-digit code → report unlocks in place; "Resend code" after 60 s.
 
 ## 10. Security and rate limiting (mandatory, every phase)
 
 - **Rate limiting:** `src/lib/rate-limit.ts`, sliding-window log on Redis keyed by `hashIdentifier(subject)`; per-route limits from section 8; all limits in one config object; Retry-After on 429.
 - **Turnstile** on POST /api/scans from Phase 2 onward; verify server-side; fail closed.
-- **Input validation:** zod on every route; placeId regex `^[A-Za-z0-9_-]{10,300}$`; phone parsed with libphonenumber-js and must be `isValid()`; URL must be http/https, max 2 KB.
+- **Input validation:** zod on every route; placeId regex `^[A-Za-z0-9_-]{10,300}$`; phone parsed with libphonenumber-js (country from the gate select) and must be `isValid()`; phones compared as E.164; URL must be http/https, max 2 KB.
 - **SSRF guard** (`src/lib/ssrf.ts`): `parsePublicUrl()` rejects non-http(s), non-default ports, credentials, IP literals and denied hosts; a guarded DNS lookup at socket-connect time rejects any non-public address (private, loopback, link-local, metadata, CGNAT, NAT64, IPv4-mapped), which also covers redirects and DNS rebinding; max 5 redirects re-checked per hop; 20 s timeout; 5 MB body cap; `User-Agent: LocalSEOAudit/1.0 (+APP_URL)`. Use `safeFetch()` for the cheerio fallback and robots/sitemap checks, and `assertPublicUrl()` before Moli navigates.
 - **Moli:** private network only, `--block-private-networks`, token gate, one CDP connection per job, hard 45 s job timeout, `browser.close()` in finally (`withPage()` does all of this); robots.txt respected for the audit fetch.
 - **Secrets:** server-only env, never `NEXT_PUBLIC_`; `serverExternalPackages` in next.config; CI fails if a server secret name appears in `.next/static`.
-- **Headers:** strict CSP (self + maps.googleapis.com + tile.openstreetmap.org + challenges.cloudflare.com), X-Frame-Options: DENY, Referrer-Policy: strict-origin-when-cross-origin, HSTS in prod.
-- **OTP:** 6 digits, `crypto.randomInt`, hashed, 10 min expiry, 5 attempts, 60 s resend cooldown, constant-time compare. Inbound codes: 8-char uppercase nanoid, single-use, 30 min expiry.
+- **Headers:** strict CSP (self + maps.googleapis.com + tile.openstreetmap.org + challenges.cloudflare.com; Phase 5 gate adds www.google.com + www.gstatic.com for reCAPTCHA, identitytoolkit.googleapis.com + securetoken.googleapis.com, and the Firebase authDomain), X-Frame-Options: DENY, Referrer-Policy: strict-origin-when-cross-origin, HSTS in prod.
+- **Phone verification:** Firebase sends and checks the SMS code. The server trusts only a Firebase ID token verified with `firebase-admin` (`aud` = project id, `sign_in_provider = phone`, `auth_time` ≤ 5 min old) and re-checks the number with libphonenumber-js (valid, country in `PHONE_COUNTRIES`). Firebase SMS region policy is an allow list of target countries; budget alert on the billing account.
 - **Report access:** scan ids are 21-char nanoid; unlock cookie is HMAC-signed `{scanId, leadId, exp}` (7 days), httpOnly, SameSite=Lax (`src/lib/unlock.ts`).
-- **Webhook:** verify X-Hub-Signature-256; idempotent on message id (Redis set, 24 h TTL).
 - **Queue hygiene:** BullMQ attempts: 2, exponential backoff, removeOnComplete: 500; per-job timeouts inside handlers (BullMQ has no job timeout); failed scans set status=failed with a user-safe message.
 - **Data retention:** nightly repeatable job nulls `placeSnapshot` where `snapshotPurgeAt < now`; deletes screenshot assets older than 90 days; keeps scores, audits, leads.
-- **Logging:** pino, redact phone, code, token, authorization, cookie; hash IPs; no Google review text in logs.
+- **Logging:** pino, redact phone, code, token, idToken, authorization, cookie; hash IPs; no Google review text in logs.
 - **Abuse:** reject scans when the URL host is denied (google.com, facebook.com, localhost, internal hosts); per-placeId daily cap prevents a competitor from hammering one business.
 
 ## 11. Scoring (config/scoring.json + src/lib/scoring.ts)
@@ -182,18 +176,19 @@ One brief per phase in `phases/`: tasks, files, acceptance criteria and the prom
 2. Intake (`phases/phase-2.md`)
 3. Audit engine (`phases/phase-3.md`)
 4. Scoring, report, live scan page (`phases/phase-4.md`)
-5. Lead gate, WhatsApp, PDF, CRM (`phases/phase-5.md`)
+5. International pass, lead gate (Firebase phone auth), PDF (`phases/phase-5.md`)
 6. Hardening, tests, deploy (`phases/phase-6.md`)
 
 ## 13. Open items (defaults used until confirmed)
 
 | Item | Default in use | Where |
 |---|---|---|
-| Country list for `includedRegionCodes` | India only | `DEFAULT_COUNTRY=IN` |
+| Countries | International (decided 2026-10-23); no country picker on search, country taken from the place | `PlaceSnapshot.countryCode` |
+| SMS countries | Allow list to choose (must match the Firebase SMS region policy) | `NEXT_PUBLIC_PHONE_COUNTRIES` |
 | The ~25 categories in the dropdown | 25 + "Something else" | `config/categories.json` |
 | "Online only" mode in v1 | Ships, behind a switch | `ONLINE_MODE=on\|off` |
-| WhatsApp provider | Meta Cloud API (needed by Phase 5) | `WHATSAPP_PROVIDER` |
-| CRM for leads | Zoho Bigin (needed by Phase 5) | `src/lib/crm.ts` |
+| Phone verification | Firebase Phone Auth, SMS (decided 2026-10-23) | `NEXT_PUBLIC_FIREBASE_*`, `FIREBASE_PROJECT_ID` |
+| CRM for leads | Deferred (user, 2026-10-23); leads kept in Postgres with `crmSyncedAt` null for a later push | `src/lib/crm.ts` (later) |
 
 ## 14. Changes from the original document (Phase 1)
 
@@ -209,9 +204,12 @@ One brief per phase in `phases/`: tasks, files, acceptance criteria and the prom
 | sha256(ip + salt), sha256(code + salt) | HMAC-SHA256 keyed with `HASH_SALT` | Same purpose, the correct primitive |
 | `CLAUDE.md` at repo root | `.claude/CLAUDE.md` | The repo root has a leftover empty `CLAUDE.md/` folder; delete it and the file can move to the root |
 | `pnpm ping` | `pnpm queue:ping` | pnpm has a built-in `ping` command that shadows the script |
-| `TURNSTILE_SITE_KEY` | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Phase 2) | The client reads it; `NEXT_PUBLIC_*`, `DEFAULT_COUNTRY` and `ONLINE_MODE` are Docker build args because the landing page is prerendered |
+| `TURNSTILE_SITE_KEY` | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Phase 2) | The client reads it; `NEXT_PUBLIC_*` and `ONLINE_MODE` are Docker build args because the landing page is prerendered (`DEFAULT_COUNTRY` was one until the Phase 5 international pass) |
 | Gemini Flash (`gemini-flash-latest`) | `gemini-3.5-flash-lite`, pinned (Phase 3) | Full Flash timed out (>60 s) or returned 503 in testing; Flash-Lite answers in 1–2 s and is cheaper. The 2.5 models are closed to new keys |
 | `"env": { "NODE_ENV": "development" }` in .claude/settings.json | Removed | It applied to every command, including `next build` |
 | — | `"type": "module"` in package.json | tsx scripts use top-level await and the Prisma client uses `import.meta` |
 | — | Shared contracts in `src/types.ts`; scan flow wired in `enqueueScan()` with placeholder jobs that mark their step `skipped` | Later phases replace job bodies without touching the flow |
 | — | `src/lib/{env,api,hash,unlock,ssrf,scan-progress}.ts` built in Phase 1 | Section 10 rules apply from Phase 1; later phases import them |
+| WhatsApp click-to-chat gate + OTP template, `/api/verify/start`, WhatsApp webhook, report sent over WhatsApp (Phase 5) | Firebase Phone Auth in the browser, ID token verified by `/api/verify/confirm`; report unlocks on the page with a PDF download; `Verification` model dropped | User decision 2026-10-23. Firebase works on web; no Meta business number, templates or webhook; Meta started charging for service and in-window utility messages on 2026-10-01 |
+| India first, `includedRegionCodes: [DEFAULT_COUNTRY]`, `regionCode` on Places calls, last-10-digit phone match, India-only ordering/booking hosts | International: worldwide search (IP-biased, no picker), country from Place Details `addressComponents`, no fixed `regionCode`, E.164 phone match via libphonenumber-js, global host lists (Phase 5 task 0) | User decision 2026-10-23: the service is for international clients |
+| PDF: Moli opens `/report/[id]/print` | Worker fetches the print page over the private network (`INTERNAL_APP_URL`), inlines CSS and fonts, and calls Moli `setContent()` + `pdf()`; homepage screenshots left out of the PDF | Moli runs with `--block-private-networks`, and it doesn't paint raster images (Phase 5 testing) |

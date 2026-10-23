@@ -26,6 +26,8 @@ describe("toPlaceSnapshot", () => {
       location: { lat: 12.9719, lng: 77.6412 },
       websiteUri: "https://sharmadental.example.in/",
       nationalPhoneNumber: "080 4123 4567",
+      internationalPhoneNumber: "+91 80 4123 4567",
+      countryCode: "IN",
       rating: 4.6,
       userRatingCount: 212,
       weekdayHours: ["Monday: 10:00 AM – 8:00 PM", "Tuesday: 10:00 AM – 8:00 PM"],
@@ -67,7 +69,7 @@ describe("getPlaceDetails", () => {
 
     expect(snap.name).toBe("Sharma Dental Care");
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("https://places.googleapis.com/v1/places/ChIJN1t_tDeuEmsRUsoyG83frY4?languageCode=en&regionCode=IN");
+    expect(url).toBe("https://places.googleapis.com/v1/places/ChIJN1t_tDeuEmsRUsoyG83frY4?languageCode=en");
     expect(init.headers).toEqual({ "X-Goog-Api-Key": "test-server-key", "X-Goog-FieldMask": PLACE_DETAILS_FIELDS });
   });
 
@@ -151,7 +153,6 @@ describe("nearby search", () => {
       rankPreference: "POPULARITY",
       locationRestriction: { circle: { center: { latitude: 12.9719, longitude: 77.6412 }, radius: 3000 } },
       languageCode: "en",
-      regionCode: "IN",
     });
   });
 });

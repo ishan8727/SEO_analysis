@@ -14,6 +14,8 @@ export default defineConfig({
       APP_URL: "http://localhost:3000",
       GOOGLE_SERVER_KEY: "test-server-key",
       DEFAULT_COUNTRY: "IN",
+      FIREBASE_PROJECT_ID: "test-project",
+      NEXT_PUBLIC_PHONE_COUNTRIES: "IN,US,GB",
     },
   },
 });

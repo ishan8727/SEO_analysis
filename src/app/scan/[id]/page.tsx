@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { Gate } from "@/components/scan/Gate";
 import { ScanLive } from "@/components/scan/ScanLive";
+import { env } from "@/lib/env";
 import { loadScanRow, toReport, toTeaser } from "@/lib/scan-view";
 import { unlockCookieName, verifyUnlock } from "@/lib/unlock";
 
@@ -34,7 +36,15 @@ export default async function ScanPage({ params }: PageProps<"/scan/[id]">) {
           <p className="text-sm break-words text-muted-foreground">{[address, websiteUrl].filter(Boolean).join(" · ")}</p>
         )}
       </header>
-      <ScanLive initial={initial} />
+      <ScanLive
+        key={unlocked ? "unlocked" : "locked"}
+        initial={initial}
+        gate={
+          !unlocked && (
+            <Gate scanId={id} countryCode={initial.countryCode} defaultCountry={env().DEFAULT_COUNTRY} />
+          )
+        }
+      />
     </main>
   );
 }

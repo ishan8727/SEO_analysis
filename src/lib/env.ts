@@ -23,13 +23,10 @@ const schema = z.object({
 
   TURNSTILE_SECRET: z.string().default(""),
 
-  WHATSAPP_PROVIDER: z.enum(["meta", "interakt"]).default("meta"),
-  WHATSAPP_PHONE_NUMBER_ID: z.string().default(""),
-  WHATSAPP_ACCESS_TOKEN: z.string().default(""),
-  WHATSAPP_VERIFY_TOKEN: z.string().default(""),
-  WHATSAPP_APP_SECRET: z.string().default(""),
-  WHATSAPP_OTP_TEMPLATE: z.string().default("otp_login"),
-  WHATSAPP_BUSINESS_NUMBER: z.string().default(""),
+  // Firebase project whose phone-auth ID tokens we accept (firebase-admin needs only the id).
+  FIREBASE_PROJECT_ID: z.string().default(""),
+  // How the worker reaches the web app over the private network (print page for the PDF).
+  INTERNAL_APP_URL: z.url().default("http://localhost:3000"),
 
   CRM_ENABLED: z
     .enum(["true", "false"])
@@ -37,6 +34,7 @@ const schema = z.object({
     .transform((v) => v === "true"),
 
   SCAN_CACHE_DAYS: z.coerce.number().int().positive().default(7),
+  // Phone gate's last-resort country code when the business has none.
   DEFAULT_COUNTRY: z.string().length(2).default("IN"),
   // "Online only" mode (audit a website without a Google profile). Also a Docker build arg.
   ONLINE_MODE: z.enum(["on", "off"]).default("on"),

@@ -143,7 +143,7 @@ export function ScanLive({ initial, gate }: { initial: ScanPayload; gate?: React
         </>
       )}
 
-      {/* Phase 5: the gate card (role → phone → "Verify on WhatsApp") goes here. */}
+      {/* Lead gate (Gate.tsx): phone verification with Firebase. */}
       {!scan.unlocked && gate}
     </div>
   );

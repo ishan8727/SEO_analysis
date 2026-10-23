@@ -2,9 +2,14 @@
   "id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
   "displayName": { "text": "Sharma Dental Care", "languageCode": "en" },
   "formattedAddress": "12, MG Road, Indiranagar, Bengaluru, Karnataka 560038, India",
+  "addressComponents": [
+    { "longText": "Bengaluru", "shortText": "Bengaluru", "types": ["locality", "political"], "languageCode": "en" },
+    { "longText": "India", "shortText": "IN", "types": ["country", "political"], "languageCode": "en" }
+  ],
   "location": { "latitude": 12.9719, "longitude": 77.6412 },
   "websiteUri": "https://sharmadental.example.in/",
   "nationalPhoneNumber": "080 4123 4567",
+  "internationalPhoneNumber": "+91 80 4123 4567",
   "rating": 4.6,
   "userRatingCount": 212,
   "reviews": [

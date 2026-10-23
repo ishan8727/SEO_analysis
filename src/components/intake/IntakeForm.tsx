@@ -21,11 +21,9 @@ const ERROR_COPY: Record<string, string> = {
 
 export function IntakeForm({
   categories,
-  country,
   onlineEnabled,
 }: {
   categories: Category[];
-  country: string;
   onlineEnabled: boolean;
 }) {
   const router = useRouter();
@@ -125,7 +123,6 @@ export function IntakeForm({
             </SelectContent>
           </Select>
           <PlacesSearch
-            country={country}
             primaryTypes={category?.primaryTypes ?? []}
             disabled={busy}
             onPick={(place) => {

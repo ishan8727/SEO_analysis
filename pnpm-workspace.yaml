@@ -8,3 +8,4 @@ allowBuilds:
   protobufjs: false
   "@google/genai": false
   workerd: false
+  "@firebase/util": false

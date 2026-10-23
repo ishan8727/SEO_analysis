@@ -19,15 +19,18 @@ writing Next code. See AGENTS.md.
 - pnpm lint && pnpm typecheck
 - pnpm queue:ping          # enqueue a ping job and wait for the worker
 - pnpm moli:smoke [url]    # drive Moli over CDP: DOM, screenshot, PDF
+- pnpm pdf:smoke           # Moli prints HTML passed with setContent() (how the PDF job works)
 - pnpm scan:run <placeId|place-details.json|url>   # dev: create a scan (no Turnstile), wait, print blobs; needs the worker
+- pnpm seed:demo [--live|--online]   # dev: insert a demo scan (no keys/worker); prints scan URL + unlock cookie
 - docker compose up --build                                     # full stack (Podman: `podman compose`)
 - docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis moli
                            # backing services on 127.0.0.1 for host dev
 
 ## Hard rules
-- Never call Google Places, PSI, Gemini or WhatsApp from client code except
-  Places Autocomplete via the Maps JS SDK with the browser key.
-- GOOGLE_SERVER_KEY, GEMINI_API_KEY, WHATSAPP_*, TURNSTILE_SECRET, DATABASE_URL,
+- Never call Google Places, PSI or Gemini from client code except
+  Places Autocomplete via the Maps JS SDK with the browser key, and Firebase Phone Auth in the gate
+  (src/lib/firebase-client.ts, loaded only by Gate.tsx).
+- GOOGLE_SERVER_KEY, GEMINI_API_KEY, TURNSTILE_SECRET, DATABASE_URL,
   REDIS_URL, MOLI_TOKEN, HASH_SALT, COOKIE_SECRET, INTERNAL_TOKEN are server-only.
   Never prefix them NEXT_PUBLIC_. Read them through `env()` in src/lib/env.ts.
 - Every API route: zod-validate input, rate-limit (`enforceRateLimits` in src/lib/rate-limit.ts,
@@ -35,7 +38,7 @@ writing Next code. See AGENTS.md.
 - Every outbound fetch to a user-supplied URL goes through src/lib/ssrf.ts (`safeFetch`,
   `assertPublicUrl` before Moli navigates). Moli is used only through `withPage()` in src/lib/browser.ts.
 - Never scrape google.com / maps. Competitors come from Nearby Search only.
-- Phone numbers stored E.164; codes stored as `hashIdentifier(code)`; never log raw phone or OTP.
+- Phone numbers stored E.164; trust a phone number only from a Firebase ID token verified server-side; never log raw phone, code or ID token.
 - Google place data (rating, reviews, hours) is cached max 30 days; place_id
   and our own computed scores/audits are kept permanently.
 - Jobs update Scan.progress only through `setStepState()` (atomic; jobs run in parallel).

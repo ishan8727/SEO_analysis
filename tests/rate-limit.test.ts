@@ -59,7 +59,7 @@ describe("rateLimit", () => {
   });
 
   it("never stores the raw subject in Redis keys", async () => {
-    await rateLimit("verifyStartPhone", "+919876543210", redis);
+    await rateLimit("verifyConfirmPhone", "+919876543210", redis);
     const keys = await redis.keys("*");
     expect(keys).toHaveLength(1);
     expect(keys[0]).not.toContain("9876543210");
@@ -68,10 +68,10 @@ describe("rateLimit", () => {
 
 describe("enforceRateLimits", () => {
   it("returns a typed 429 with Retry-After for the first exceeded limit", async () => {
-    for (let i = 0; i < 3; i++) {
-      expect(await enforceRateLimits([["verifyStartIp", "ip"]], redis)).toBeNull();
+    for (let i = 0; i < 5; i++) {
+      expect(await enforceRateLimits([["scanCreateIpMinute", "ip"]], redis)).toBeNull();
     }
-    const res = await enforceRateLimits([["verifyStartIp", "ip"]], redis);
+    const res = await enforceRateLimits([["scanCreateIpMinute", "ip"]], redis);
     expect(res?.status).toBe(429);
     expect(Number(res?.headers.get("Retry-After"))).toBeGreaterThan(0);
     expect(await res?.json()).toEqual({ error: "Too many requests", code: "RATE_LIMITED" });

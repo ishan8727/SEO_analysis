@@ -1,9 +1,7 @@
 import { IntakeForm } from "@/components/intake/IntakeForm";
 import { CATEGORIES } from "@/lib/categories";
 
-// Static page: DEFAULT_COUNTRY and ONLINE_MODE are read at build time
-// (Docker build args), the same values the API reads at runtime.
-const country = process.env.DEFAULT_COUNTRY ?? "IN";
+// Static page: ONLINE_MODE is read at build time (Docker build arg), the same value the API reads at runtime.
 const onlineEnabled = process.env.ONLINE_MODE !== "off";
 
 export default function Home() {
@@ -16,7 +14,7 @@ export default function Home() {
           about a minute.
         </p>
       </div>
-      <IntakeForm categories={CATEGORIES} country={country} onlineEnabled={onlineEnabled} />
+      <IntakeForm categories={CATEGORIES} onlineEnabled={onlineEnabled} />
     </main>
   );
 }

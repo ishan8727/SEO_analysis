@@ -22,7 +22,8 @@
     "queue:ping": "tsx --env-file-if-exists=.env scripts/ping.ts",
     "moli:smoke": "tsx --env-file-if-exists=.env scripts/moli-smoke.ts",
     "scan:run": "tsx --env-file-if-exists=.env scripts/run-scan.ts",
-    "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts"
+    "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts",
+    "pdf:smoke": "tsx --env-file-if-exists=.env scripts/pdf-smoke.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -35,6 +36,8 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.5.0",
     "dotenv": "^18.0.8",
+    "firebase": "^13.1.0",
+    "firebase-admin": "^14.5.0",
     "ioredis": "^6.0.0",
     "ipaddr.js": "^2.5.0",
     "leaflet": "^1.9.4",
