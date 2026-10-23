@@ -177,6 +177,8 @@ export interface ScanTeaser {
   progress: ScanProgress;
   business: { name: string; address: string | null; websiteUrl: string | null };
   score: Pick<ScoreResult, "total" | "grade" | "pillars" | "rank"> | null;
+  /** While running: pillars whose steps have all ended (src/lib/scoring.ts partialPillars). */
+  partialPillars?: Partial<Record<Pillar, number>>;
   screenshots: Partial<Record<"mobile" | "desktop", string>>; // URLs
   fixesPreview: Fix[]; // top fixes not locked (spec: 5 shown, 3 locked → 2 here)
   lockedFixCount: number;

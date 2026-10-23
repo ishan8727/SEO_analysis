@@ -21,7 +21,8 @@
     "db:generate": "prisma generate",
     "queue:ping": "tsx --env-file-if-exists=.env scripts/ping.ts",
     "moli:smoke": "tsx --env-file-if-exists=.env scripts/moli-smoke.ts",
-    "scan:run": "tsx --env-file-if-exists=.env scripts/run-scan.ts"
+    "scan:run": "tsx --env-file-if-exists=.env scripts/run-scan.ts",
+    "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
