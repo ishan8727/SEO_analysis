@@ -1,12 +1,12 @@
 # Build phases
 
-Build these **one at a time, in order**. Each phase builds on the previous one's output,
+Progress and next steps are tracked in `../TODO.md`. Build these **one at a time, in order**. Each phase builds on the previous one's output,
 so don't start a phase until the one before it passes its acceptance criteria.
 
 | Phase | Brief | Status |
 |---|---|---|
 | 1 | [Setup and infrastructure](phase-1.md) | Done |
-| 2 | [Intake](phase-2.md) | Next. Answer SPEC.md section 13 first |
+| 2 | [Intake](phase-2.md) | Code done; see TODO.md for what's left |
 | 3 | [Audit engine](phase-3.md) | — |
 | 4 | [Scoring, report, live scan page](phase-4.md) | — |
 | 5 | [Lead gate, WhatsApp, PDF, CRM](phase-5.md) | — |

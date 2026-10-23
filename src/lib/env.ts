@@ -38,6 +38,8 @@ const schema = z.object({
 
   SCAN_CACHE_DAYS: z.coerce.number().int().positive().default(7),
   DEFAULT_COUNTRY: z.string().length(2).default("IN"),
+  // "Online only" mode (audit a website without a Google profile). Also a Docker build arg.
+  ONLINE_MODE: z.enum(["on", "off"]).default("on"),
 });
 
 export type Env = z.infer<typeof schema>;

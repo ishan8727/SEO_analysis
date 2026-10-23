@@ -2,6 +2,7 @@
 
 Single Next.js 16 (App Router, TS strict, Cache Components) repo. One Docker image runs two
 processes: the web app (`next start`) and the BullMQ worker (`node dist-worker/index.mjs`).
+Start every session by reading TODO.md (progress, what is left, environment gotchas).
 Read SPEC.md before any task; it is the source of truth. Build phases in order from
 `phases/phase-N.md` and stop at each phase's acceptance criteria.
 

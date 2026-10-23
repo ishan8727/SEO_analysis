@@ -1,0 +1,37 @@
+{
+  "id": "ChIJN1t_tDeuEmsRUsoyG83frY4",
+  "displayName": { "text": "Sharma Dental Care", "languageCode": "en" },
+  "formattedAddress": "12, MG Road, Indiranagar, Bengaluru, Karnataka 560038, India",
+  "location": { "latitude": 12.9719, "longitude": 77.6412 },
+  "websiteUri": "https://sharmadental.example.in/",
+  "nationalPhoneNumber": "080 4123 4567",
+  "rating": 4.6,
+  "userRatingCount": 212,
+  "reviews": [
+    {
+      "name": "places/x/reviews/1",
+      "relativePublishTimeDescription": "2 weeks ago",
+      "rating": 5,
+      "text": { "text": "Painless root canal, very kind staff.", "languageCode": "en" },
+      "originalText": { "text": "Painless root canal, very kind staff.", "languageCode": "en" },
+      "authorAttribution": { "displayName": "A Reviewer", "uri": "https://www.google.com/maps/contrib/1" },
+      "publishTime": "2026-10-05T09:12:00Z"
+    },
+    {
+      "name": "places/x/reviews/2",
+      "rating": 3,
+      "text": { "text": "Long wait on Saturday.", "languageCode": "en" },
+      "publishTime": "2026-07-01T10:00:00Z"
+    },
+    { "name": "places/x/reviews/3", "rating": 4 }
+  ],
+  "regularOpeningHours": {
+    "openNow": true,
+    "weekdayDescriptions": ["Monday: 10:00 AM – 8:00 PM", "Tuesday: 10:00 AM – 8:00 PM"]
+  },
+  "photos": [{ "name": "places/x/photos/1" }, { "name": "places/x/photos/2" }, { "name": "places/x/photos/3" }],
+  "businessStatus": "OPERATIONAL",
+  "primaryType": "dentist",
+  "editorialSummary": { "text": "Family dental clinic.", "languageCode": "en" },
+  "googleMapsUri": "https://maps.google.com/?cid=123"
+}

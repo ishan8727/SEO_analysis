@@ -14,6 +14,16 @@ FROM base AS prod-deps
 RUN pnpm install --prod --frozen-lockfile
 
 FROM base AS build
+# Inlined into the static landing page / client bundle at build time.
+# Railway passes service variables with these names as build args.
+ARG NEXT_PUBLIC_GOOGLE_BROWSER_KEY=""
+ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=""
+ARG DEFAULT_COUNTRY=IN
+ARG ONLINE_MODE=on
+ENV NEXT_PUBLIC_GOOGLE_BROWSER_KEY=$NEXT_PUBLIC_GOOGLE_BROWSER_KEY
+ENV NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY
+ENV DEFAULT_COUNTRY=$DEFAULT_COUNTRY
+ENV ONLINE_MODE=$ONLINE_MODE
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN pnpm prisma generate && pnpm build && pnpm build:worker

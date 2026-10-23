@@ -12,6 +12,8 @@ export default defineConfig({
       HASH_SALT: "test-salt-0123456789abcdef",
       COOKIE_SECRET: "test-cookie-secret-0123456789abcdef0123456789",
       APP_URL: "http://localhost:3000",
+      GOOGLE_SERVER_KEY: "test-server-key",
+      DEFAULT_COUNTRY: "IN",
     },
   },
 });

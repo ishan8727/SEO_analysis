@@ -5,7 +5,13 @@
 
 x-app: &app
   image: local-seo-audit:local
-  build: .
+  build:
+    context: .
+    args:
+      NEXT_PUBLIC_GOOGLE_BROWSER_KEY: ${NEXT_PUBLIC_GOOGLE_BROWSER_KEY:-}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}
+      DEFAULT_COUNTRY: ${DEFAULT_COUNTRY:-IN}
+      ONLINE_MODE: ${ONLINE_MODE:-on}
   env_file:
     - path: .env
       required: false

@@ -1,3 +1,4 @@
+
 # SPEC.md — Local SEO Audit & Lead Gen Tool
 
 Source of truth for this repo. Converted from `target/Implmentation DOC.docx`. Corrections found while building Phase 1 are folded in and listed in section 14. Architecture diagram: `target/Architecture.png`.
@@ -184,13 +185,15 @@ One brief per phase in `phases/`: tasks, files, acceptance criteria and the prom
 5. Lead gate, WhatsApp, PDF, CRM (`phases/phase-5.md`)
 6. Hardening, tests, deploy (`phases/phase-6.md`)
 
-## 13. Open items to confirm before Phase 2
+## 13. Open items (defaults used until confirmed)
 
-- Country list for `includedRegionCodes` (India only, or more).
-- The ~25 categories you want in the dropdown.
-- WhatsApp provider: Meta Cloud API direct or Interakt (affects env + template approval lead time).
-- Which CRM gets the lead (Zoho Bigin assumed).
-- Whether "Online only" mode ships in v1 or is hidden behind a flag.
+| Item | Default in use | Where |
+|---|---|---|
+| Country list for `includedRegionCodes` | India only | `DEFAULT_COUNTRY=IN` |
+| The ~25 categories in the dropdown | 25 + "Something else" | `config/categories.json` |
+| "Online only" mode in v1 | Ships, behind a switch | `ONLINE_MODE=on\|off` |
+| WhatsApp provider | Meta Cloud API (needed by Phase 5) | `WHATSAPP_PROVIDER` |
+| CRM for leads | Zoho Bigin (needed by Phase 5) | `src/lib/crm.ts` |
 
 ## 14. Changes from the original document (Phase 1)
 
@@ -206,6 +209,7 @@ One brief per phase in `phases/`: tasks, files, acceptance criteria and the prom
 | sha256(ip + salt), sha256(code + salt) | HMAC-SHA256 keyed with `HASH_SALT` | Same purpose, the correct primitive |
 | `CLAUDE.md` at repo root | `.claude/CLAUDE.md` | The repo root has a leftover empty `CLAUDE.md/` folder; delete it and the file can move to the root |
 | `pnpm ping` | `pnpm queue:ping` | pnpm has a built-in `ping` command that shadows the script |
+| `TURNSTILE_SITE_KEY` | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Phase 2) | The client reads it; `NEXT_PUBLIC_*`, `DEFAULT_COUNTRY` and `ONLINE_MODE` are Docker build args because the landing page is prerendered |
 | `"env": { "NODE_ENV": "development" }` in .claude/settings.json | Removed | It applied to every command, including `next build` |
 | — | `"type": "module"` in package.json | tsx scripts use top-level await and the Prisma client uses `import.meta` |
 | — | Shared contracts in `src/types.ts`; scan flow wired in `enqueueScan()` with placeholder jobs that mark their step `skipped` | Later phases replace job bodies without touching the flow |
