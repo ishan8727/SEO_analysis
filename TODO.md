@@ -125,7 +125,8 @@ compose + Caddy for HTTPS, images from Cloud Build / Artifact Registry, secrets 
 with nightly `pg_dump` to Cloud Storage, in project `tsi-project-cd47e` (confirmed 2026-10-24). Full task list in `phases/phase-6.md`.
 - [ ] **User:** one-time GCP setup, `runbook.md` section 1 (VM, firewall, registry, secrets, backups, DNS). Phase 6 code waits on it
   only for the live deploy.
- Notes carried over:
+
+Notes carried over:
 - e2e smoke: search → scan → teaser → **Firebase gate** (not WhatsApp/OTP). The gate can't be automated past reCAPTCHA; in CI, fake
   the token check (mock `verifyPhoneIdToken`) or use `auth.settings.appVerificationDisabledForTesting` with a test number.
 - [x] CSP + security headers (2026-10-24): `src/lib/security-headers.ts`, applied in `next.config.ts` `headers()`. Allowlist CSP
