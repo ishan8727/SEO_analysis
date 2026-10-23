@@ -123,9 +123,16 @@ Also committed: `architecture.md` (service map) and `setup.md` (run it on Window
 Refresh `phases/phase-6.md` before building; it predates the Firebase switch:
 - e2e smoke: search → scan → teaser → **Firebase gate** (not WhatsApp/OTP). The gate can't be automated past reCAPTCHA; in CI, fake
   the token check (mock `verifyPhoneIdToken`) or use `auth.settings.appVerificationDisabledForTesting` with a test number.
-- CSP must allow the gate: `www.google.com` + `www.gstatic.com` (reCAPTCHA scripts/frames), `identitytoolkit.googleapis.com` +
-  `securetoken.googleapis.com` (connect), the Firebase `authDomain` (frame); plus Maps, OSM tiles, Turnstile (SPEC.md section 10).
-- Add a `/privacy` page (the gate's consent line links to it).
+- [x] CSP + security headers (2026-10-24): `src/lib/security-headers.ts`, applied in `next.config.ts` `headers()`. Allowlist CSP
+  without nonces (nonces don't work with Cache Components / PPR); see SPEC.md section 14. Checked in Edge: landing (Turnstile,
+  Places autocomplete), report (OSM tiles), gate (reCAPTCHA, Firebase) load with zero CSP violations; prod build has no
+  `unsafe-eval`; HSTS from prod builds only. Tests: `tests/security-headers.test.ts`.
+- [x] `/privacy` page (2026-10-24): operator The Sales Inc, contact grow@thesalesinc.com; linked from the landing page and the gate.
+  Keep it in step with the code (it names Google, Cloudflare, Make.com, Railway, OSM; retention 30 days / 90 days / leads kept).
+- [ ] **Lead webhook to Make.com** (user task, 2026-10-24): after `/api/verify/confirm` stores a verified lead, POST it to a
+  webhook URL the user will provide (`LEAD_WEBHOOK_URL`, server-only). Payload: phone E.164, country, role, scanId, business
+  name/website, score, report URL. Send from the worker (queued job with retries), not inline in the request; set
+  `crmSyncedAt` on success. The privacy page already lists Make.com.
 - Railway: web, worker, moli services; build args `NEXT_PUBLIC_GOOGLE_BROWSER_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`,
   `NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_PHONE_COUNTRIES`, `ONLINE_MODE`; worker `INTERNAL_APP_URL=http://web.railway.internal:3000`;
   custom domain `audit.thesalesinc.com` (already in Firebase authorized domains and the API key's referrers); real Turnstile

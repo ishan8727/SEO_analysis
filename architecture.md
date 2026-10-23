@@ -260,5 +260,5 @@ Defaults: 2 attempts, exponential backoff; a step that gives up is marked `faile
 ## 11. Still to come (Phase 6)
 
 Railway deploy (web + worker from one image, moli, managed Postgres + Redis) on `audit.thesalesinc.com`; CSP and security
-headers (including the reCAPTCHA and Firebase domains); the nightly `retention` job; a `/privacy` page; real 404 status codes
+headers and the `/privacy` page are done (2026-10-24); the nightly `retention` job; the lead webhook to Make.com; real 404 status codes
 via `proxy.ts`; live SMS tests. CRM push later, when the user picks it up.

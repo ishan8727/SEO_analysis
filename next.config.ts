@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./src/lib/security-headers";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -19,6 +20,14 @@ const nextConfig: NextConfig = {
     "undici",
     "firebase-admin",
   ],
+  // CSP, frame, referrer and HSTS headers on every route (SPEC.md section 10).
+  async headers() {
+    const headers = securityHeaders({
+      isDev: process.env.NODE_ENV === "development",
+      firebaseAuthDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    });
+    return [{ source: "/:path*", headers }];
+  },
   turbopack: {
     rules: {
       "*.css": {

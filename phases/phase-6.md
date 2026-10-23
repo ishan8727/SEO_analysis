@@ -4,7 +4,7 @@
 
 ## Tasks
 
-1. **Security headers**: strict CSP (self + maps.googleapis.com/maps.gstatic.com as the Maps SDK needs + tile.openstreetmap.org + challenges.cloudflare.com), X-Frame-Options: DENY, Referrer-Policy: strict-origin-when-cross-origin, HSTS in prod. Check `node_modules/next/dist/docs/` for the Next 16 CSP guide (nonces via `proxy.ts`).
+1. ✅ **Security headers** (done 2026-10-24, allowlist CSP without nonces; see SPEC.md section 14): strict CSP (self + maps.googleapis.com/maps.gstatic.com as the Maps SDK needs + tile.openstreetmap.org + challenges.cloudflare.com), X-Frame-Options: DENY, Referrer-Policy: strict-origin-when-cross-origin, HSTS in prod. Check `node_modules/next/dist/docs/` for the Next 16 CSP guide (nonces via `proxy.ts`).
 2. **Retention** (`src/worker/jobs/retention.ts`): register a nightly job scheduler from the worker; null `placeSnapshot` where `snapshotPurgeAt < now`; delete screenshot `Asset`s older than 90 days; keep scores, audits, leads.
 3. **CI**: extend the secret-leak check to the actual key values (from CI secrets) as well as the names.
 4. **e2e smoke** (Playwright against compose): search → scan → teaser → OTP → report. Use fake Google/WhatsApp providers in a test mode, so CI needs no real keys.

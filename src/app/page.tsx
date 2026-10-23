@@ -15,6 +15,11 @@ export default function Home() {
         </p>
       </div>
       <IntakeForm categories={CATEGORIES} onlineEnabled={onlineEnabled} />
+      <p className="text-xs text-muted-foreground">
+        <a href="/privacy" className="underline underline-offset-2">
+          Privacy policy
+        </a>
+      </p>
     </main>
   );
 }
