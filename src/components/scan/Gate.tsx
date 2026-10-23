@@ -40,6 +40,8 @@ const FIREBASE_ERRORS: Record<string, string> = {
   "auth/missing-verification-code": "Enter the 6-digit code from the text message.",
   "auth/code-expired": "That code has expired. Send a new one.",
   "auth/captcha-check-failed": "We couldn't check you're human. Please try again.",
+  // reCAPTCHA token rejected; usually a blocker (Brave Shields, uBlock) breaking reCAPTCHA.
+  "auth/invalid-app-credential": "We couldn't check you're human. Turn off ad or tracker blocking for this page and try again.",
   "auth/network-request-failed": "We couldn't reach the server. Check your connection and try again.",
 };
 
@@ -51,6 +53,8 @@ const API_ERRORS: Record<string, string> = {
 
 function messageFor(err: unknown): string {
   const code = (err as { code?: string })?.code ?? "";
+  // Only the error code: Firebase's error object can carry the phone number in customData.
+  if (!FIREBASE_ERRORS[code]) console.warn("phone verification failed:", code || "unknown error");
   return FIREBASE_ERRORS[code] ?? "Something went wrong. Please try again.";
 }
 

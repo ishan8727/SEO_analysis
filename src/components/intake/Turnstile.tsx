@@ -3,7 +3,8 @@
 import { useEffect, useEffectEvent, useRef } from "react";
 
 // Cloudflare Turnstile, explicit render. Tokens are single-use: bump `resetKey`
-// after every submit to get a fresh one.
+// after every submit to get a fresh one. `interaction-only`: most visitors see nothing; the
+// widget appears only when Cloudflare wants the visitor to click.
 
 interface TurnstileApi {
   render(el: HTMLElement, opts: Record<string, unknown>): string;
@@ -61,6 +62,8 @@ export function Turnstile({
         widgetId.current = api.render(container.current, {
           sitekey: siteKey,
           size: "flexible",
+          appearance: "interaction-only",
+          theme: "auto",
           callback: (token: string) => emitToken(token),
           "expired-callback": () => emitToken(null),
           "error-callback": () => emitError(),
@@ -81,5 +84,5 @@ export function Turnstile({
     }
   }, [resetKey]);
 
-  return <div ref={container} className="min-h-[65px]" />;
+  return <div ref={container} />; // empty unless Cloudflare asks for a click
 }

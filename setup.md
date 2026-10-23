@@ -42,7 +42,7 @@ Fill these in. Everything not listed can stay as it is.
 | `NEXT_PUBLIC_GOOGLE_BROWSER_KEY` | Google Maps browser key (search box). In Google Cloud, its website list must include `http://localhost:3000/*`. |
 | `GOOGLE_SERVER_KEY`, `PSI_API_KEY` | Google server key (Places + PageSpeed). `PSI_API_KEY` can be the same key. |
 | `GEMINI_API_KEY` | From Google AI Studio (review analysis). |
-| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | For your PC use Cloudflare's test keys, which always pass:<br/>`1x00000000000000000000AA` / `1x0000000000000000000000000000000AA` |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | For your PC use Cloudflare's invisible test keys (always pass, nothing shown):<br/>`1x00000000000000000000BB` / `1x0000000000000000000000000000000AA` |
 | `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase web app API key (project `tsi-project-cd47e`). |
 | `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `tsi-project-cd47e.firebaseapp.com` |
 | `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `FIREBASE_PROJECT_ID` | `tsi-project-cd47e` |
@@ -52,7 +52,20 @@ No Google or Gemini keys yet? You can still see the whole UI with demo data (ste
 
 ## 4. Start it
 
-You need **three PowerShell windows**, all in the `project` folder.
+**One command** (in the `project` folder):
+
+```powershell
+pnpm start:app
+```
+
+It starts Podman if needed, brings up the helper services (database, queue, browser), applies database
+migrations, then runs the website and the worker together in that window (lines start with `[web]` or
+`[worker]`). Ctrl+C stops the website and worker; the helper services keep running.
+
+Both the website **and** the worker must be running. With only the website, a scan sits on "Waiting" forever
+because nothing picks up its jobs.
+
+**Or by hand, in three PowerShell windows:**
 
 **Window 1: helper services** (database, queue, browser)
 
@@ -107,8 +120,20 @@ Other demo modes: `pnpm seed:demo --live` (watch a scan "run" step by step) and 
 3. Press **Text me a code**. reCAPTCHA may show a picture puzzle first.
 4. Enter the code and press **Unlock my report**. You go to the full report.
 
-Firebase officially supports phone sign-in only on real domains. If the unlock fails on `localhost`, use
-option B to see the unlocked report; the real test happens on `audit.thesalesinc.com` after it's deployed.
+**Test the unlock on `dev.thesalesinc.com`, not `localhost`.** Firebase rejects phone sign-in from
+`localhost` with "We couldn't check you're human…" (Firebase bug
+[#8387](https://github.com/firebase/firebase-js-sdk/issues/8387)), even with the test number. Once per PC,
+in PowerShell **as Administrator**:
+
+```powershell
+Add-Content C:\Windows\System32\drivers\etc\hosts "127.0.0.1 dev.thesalesinc.com"
+```
+
+Then open the scan at **http://dev.thesalesinc.com:3000/scan/...** (same app, just another name for this
+PC). Firebase's authorized domains and its browser key already allow it. For the search box and the
+Turnstile check to work there too, add `http://dev.thesalesinc.com:3000/*` to the Maps browser key and
+`dev.thesalesinc.com` to the Turnstile widget's hostnames. An unlock on one name doesn't carry over to the
+other (the cookie belongs to the name).
 
 ## 6. Stop it
 

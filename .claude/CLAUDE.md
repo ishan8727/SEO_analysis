@@ -14,6 +14,7 @@ writing Next code. See AGENTS.md.
 ## Commands
 - pnpm dev                 # next dev
 - pnpm worker:dev          # tsx watch src/worker/index.ts
+- pnpm start:app           # local dev in one terminal: services up, migrate deploy, dev + worker:dev
 - pnpm build / pnpm build:worker / pnpm start / pnpm worker
 - pnpm prisma migrate dev / pnpm prisma generate   # generate after every schema change
 - pnpm test                # vitest; needs Redis (rate-limit tests use DB 15)

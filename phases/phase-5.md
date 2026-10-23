@@ -23,9 +23,9 @@ See SPEC.md section 14.
 ## Firebase setup (done 2026-10-23, project `tsi-project-cd47e`)
 
 - Blaze plan on; Phone sign-in on; web app "Local SEO Audit" registered; `.env` has the four Firebase keys and `NEXT_PUBLIC_PHONE_COUNTRIES`.
-- SMS region policy: allow list AE AL AM AT AU AW BH BJ BQ BS BY GB UN US CA IC IN (the user's choice). `NEXT_PUBLIC_PHONE_COUNTRIES` mirrors it; change both together. This is the main protection against SMS pumping, because the browser asks Google to send the SMS directly and our rate limits can't stop it.
-- Authorized domains: `audit.thesalesinc.com` (production), `www.thesalesinc.com`, the Firebase domains, `localhost`.
-- Browser API key: referrers `https://audit.thesalesinc.com/*`, `https://www.thesalesinc.com/*`, the two Firebase domains, `http://localhost:3000/*`; APIs Identity Toolkit, Token Service, Installations, App Check, Firebase Management.
+- SMS region policy: allow list AE AL AT AU AW BH BQ BS GB UN US CA IC IN IO (the user's choice, updated 2026-10-23; IN confirmed on). `NEXT_PUBLIC_PHONE_COUNTRIES` mirrors it; change both together. This is the main protection against SMS pumping, because the browser asks Google to send the SMS directly and our rate limits can't stop it.
+- Authorized domains: `audit.thesalesinc.com` (production), `www.thesalesinc.com`, the Firebase domains, `localhost`, `dev.thesalesinc.com` (local testing, see setup.md 5C).
+- Browser API key: referrers `https://audit.thesalesinc.com/*`, `https://www.thesalesinc.com/*`, the two Firebase domains, `http://localhost:3000/*`, `http://dev.thesalesinc.com:3000/*`; APIs Identity Toolkit, Token Service, Installations, App Check, Firebase Management.
 - Test numbers (no SMS, code `123456`): `+1 650-555-0100`, `+44 7700 900123`.
 - Still the user's: a budget alert on the billing account (Billing → Budgets & alerts). Budgets only alert; they don't stop spending.
 - Later, once traffic is real: lower the per-IP SMS quota, and turn on reCAPTCHA SMS defense / App Check.

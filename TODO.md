@@ -3,25 +3,34 @@
 Read this first in a new session, then SPEC.md and the brief for the current phase in `phases/`.
 Build phases **one at a time, in order**. Stop after each phase and show the user how to verify it.
 
+## Current stage (2026-10-23)
+
+Phases 1–5 are built, committed and pushed to `main` (GitHub `ishanchaudhary-eng/TSI_Business_Analyzer`). The whole UI works
+locally (`pnpm start:app`, see `setup.md`): search → live scan → teaser → phone gate → full report → PDF. **Next: Phase 6** (hardening + deploy to
+`audit.thesalesinc.com`); refresh its brief first (see "Phase 6 — next"). The phone gate's SMS step can only be proven live after
+deploy. `architecture.md` maps every service and integration.
+
 ## Status
 
 | Phase | Brief | Status |
 |---|---|---|
 | 1 Setup and infrastructure | phases/phase-1.md | ✅ Done, committed (`a7051d4`) |
-| 2 Intake | phases/phase-2.md | 🟡 Code done, verified locally, committed (`b57b306`); a few checks left (see below) |
-| 3 Audit engine | phases/phase-3.md | ✅ Done; acceptance checks passed with real keys (see below). Committed (`38ed8cd`, `8689c98`) |
-| 4 Scoring, report, live scan page | phases/phase-4.md | 🟡 Built and verified locally; not committed yet (see below) |
-| 5 International pass, lead gate (Firebase phone auth), PDF | phases/phase-5.md | 🟡 Built and verified locally (2026-10-23); not committed. Live SMS test after deploy (see below) |
-| 6 Hardening, tests, deploy | phases/phase-6.md | ⬜ Not started |
+| 2 Intake | phases/phase-2.md | ✅ Done, committed (`b57b306`); two manual checks left (see below) |
+| 3 Audit engine | phases/phase-3.md | ✅ Done; acceptance checks passed with real keys. Committed (`38ed8cd`, `8689c98`) |
+| 4 Scoring, report, live scan page | phases/phase-4.md | ✅ Done, committed (`d303ff8`) |
+| 5 International pass, lead gate (Firebase phone auth), PDF | phases/phase-5.md | ✅ Built, verified locally, committed (`0e3054c`, follow-up `ff8af71`). Live SMS tests wait for deploy |
+| 6 Hardening, tests, deploy | phases/phase-6.md | ⬜ Next. Refresh the brief first |
+
+Also committed: `architecture.md` (service map) and `setup.md` (run it on Windows) in `ff8af71`.
 
 ## Phase 2 — remaining
 
-- [ ] Rebuild the Docker image and check the containerised web + worker (the Dockerfile gained build args):
-      `podman compose -f docker-compose.yml -f docker-compose.dev.yml up -d --build web worker`, then
-      `/api/health` is green and `/` renders. (The user stopped this step in the last session; ask before running.)
-- [ ] Manual UI check in a real browser once Google keys exist: typing shows suggestions, picking redirects to `/scan/[id]`.
-- [ ] Local-mode success path needs `GOOGLE_SERVER_KEY` + `NEXT_PUBLIC_GOOGLE_BROWSER_KEY` in `.env` (not set yet).
-      Without the server key, local mode returns 500 `SCAN_FAILED` and logs "GOOGLE_SERVER_KEY is not set".
+- [ ] Rebuild the Docker image and check the containerised web + worker (build args grew again in Phase 5: Firebase + phone
+      countries; compose sets `INTERNAL_APP_URL`): `podman compose up -d --build`, then `/api/health` is green, `/` renders, and a
+      demo PDF is made by the containerised worker. **Ask before running** (the user stopped an unannounced rebuild before).
+- [ ] Manual UI check in a real browser: typing shows suggestions, picking redirects to `/scan/[id]`. Needs the browser key's
+      website list to include `http://localhost:3000/*` (not verified).
+- [x] Local-mode success path with real keys: done in Phase 3 (real Bengaluru scans through the worker).
 
 ### Phase 2 verified so far (dev server + worker on the host)
 - Online mode creates a scan, redirects target `/scan/[id]` renders, the flow finishes (`done`).
@@ -87,7 +96,7 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 - Phase 5: put the gate card in the `gate` prop of `ScanLive` (src/components/scan/ScanLive.tsx); `ReportView` takes a `ScanReport`
   for the print page.
 
-## Phase 5 — verified locally (2026-10-23, `next start` + host worker + Moli)
+## Phase 5 — verified locally (2026-10-23, `next start` + host worker + Moli); committed `0e3054c`
 - typecheck, lint, 142 tests (9 verify-confirm, 1 print-html, 9 new phone-match), `next build`, worker build pass.
 - `/api/verify/confirm` (firebase-admin mocked): cookie + `Lead` upsert keyed on scan + phone + PDF job; bad/stale/non-phone token → 401;
   number outside `NEXT_PUBLIC_PHONE_COUNTRIES` → 403; real firebase-admin rejects garbage and wrong-project tokens. Logs carry no phone or token.
@@ -104,32 +113,78 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 - The print page answers HTTP 200 with the not-found page for a missing/wrong token (same PPR limitation as Phase 4); no report data is sent.
 - If a visitor closes the reCAPTCHA challenge, the gate button stays on "Sending…" until they reload. Revisit after live testing.
 - The consent line links to `/privacy`, which doesn't exist yet: Phase 6 must add the privacy policy page.
-- Live checks left for after deploy on `audit.thesalesinc.com`: test number +1 650-555-0100 / 123456 end to end, one real SMS to an
-  Indian number, wrong-code copy, and a full scan of a non-Indian business.
+- Live checks left for after deploy (listed under "Phase 6 — next").
 - Deploy needs the new build args (`NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_PHONE_COUNTRIES`) and `INTERNAL_APP_URL` for the worker.
+- Follow-up `ff8af71`: the print page takes `INTERNAL_TOKEN` in the `x-internal-token` header (the URL form leaked into the dev request
+  log; the token was rotated); the print page calls `connection()` before `new Date()`; `seed:demo` queues the PDF and exits.
 
-## Decisions waiting on the user (SPEC.md section 13)
-Phase 2 used these defaults; change them if the user answers differently:
-- Countries: **international** (decided 2026-10-23). Phase 5 task 0 (international pass) is **done, not committed**: worldwide search with no country picker (Google ranks by visitor IP), country from Place Details, international phone/NAP matching, global host lists, neutral labels. typecheck, lint, 132 tests, `next build`, worker build pass. Not yet checked with a real key on a non-Indian business. `DEFAULT_COUNTRY` is now only the phone gate's last-resort default.
-- Categories: 25 + "Something else" in `config/categories.json` (types unverified against Google until a key exists).
+## Phase 6 — next
+
+Refresh `phases/phase-6.md` before building; it predates the Firebase switch:
+- e2e smoke: search → scan → teaser → **Firebase gate** (not WhatsApp/OTP). The gate can't be automated past reCAPTCHA; in CI, fake
+  the token check (mock `verifyPhoneIdToken`) or use `auth.settings.appVerificationDisabledForTesting` with a test number.
+- CSP must allow the gate: `www.google.com` + `www.gstatic.com` (reCAPTCHA scripts/frames), `identitytoolkit.googleapis.com` +
+  `securetoken.googleapis.com` (connect), the Firebase `authDomain` (frame); plus Maps, OSM tiles, Turnstile (SPEC.md section 10).
+- Add a `/privacy` page (the gate's consent line links to it).
+- Railway: web, worker, moli services; build args `NEXT_PUBLIC_GOOGLE_BROWSER_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`,
+  `NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_PHONE_COUNTRIES`, `ONLINE_MODE`; worker `INTERNAL_APP_URL=http://web.railway.internal:3000`;
+  custom domain `audit.thesalesinc.com` (already in Firebase authorized domains and the API key's referrers); real Turnstile
+  keys are in `.env.railway` (gitignored, not loaded locally; secret verified with siteverify 2026-10-23). Widget mode Managed;
+  the app renders it `interaction-only`. Localhost keeps the invisible test key `1x00000000000000000000BB`.
+- Keep from the old brief: retention job, CI secret-leak check on values, autocannon load test, PostHog events, runbook, `getClientIp()`.
+- Optional: real 404s via `proxy.ts`; reset the gate when the reCAPTCHA challenge is closed (`expired-callback` / timeout).
+
+Live checks after deploy (Phase 5 acceptance):
+- [ ] Test number `+1 650-555-0100` / `123456`: gate → code → report unlocks.
+- [ ] One real SMS to an Indian number; a wrong code shows the error copy.
+- [ ] Autocomplete finds businesses in IN, US and GB without picking a country; a full scan of a non-Indian business (e.g. a
+      London dentist) finishes with competitors, a NAP phone match and a score.
+- [ ] PDF downloads on the live site.
+
+## Decisions (SPEC.md section 13)
+- Countries: **international** (decided 2026-10-23), done in Phase 5 task 0: worldwide search with no country picker (Google ranks
+  by visitor IP), country from Place Details, international phone/NAP matching, global host lists, neutral labels. Not yet checked
+  with a real key on a non-Indian business. `DEFAULT_COUNTRY` is only the phone gate's last-resort default.
+- SMS countries (Firebase SMS region policy, mirrored in `.env` `NEXT_PUBLIC_PHONE_COUNTRIES`, synced 2026-10-23):
+  AE AL AT AU AW BH BQ BS GB UN US CA IC IN IO. India is on. UN and IC aren't dialling regions (the gate hides them).
+- Categories: 25 + "Something else" in `config/categories.json`; types checked against real Bengaluru results in Phase 3.
 - Online-only mode: ships in v1 behind `ONLINE_MODE=on|off`.
 - Phone verification: **Firebase Phone Auth (SMS)**, decided 2026-10-23; no WhatsApp. Report unlocks on the page + PDF download.
 - Firebase (`tsi-project-cd47e`) is configured (2026-10-23); details in phases/phase-5.md "Firebase setup". Still the user's: a budget alert. Testing is live on `audit.thesalesinc.com` after deploy (no emulator).
 - CRM: deferred by the user; leads stay in Postgres (`crmSyncedAt` null) for a later backfill.
+
+## Waiting on the user
+- [ ] Budget alert on the billing account (Google Cloud → Billing → Budgets & alerts; e.g. alerts at 30/50/90/100% of a monthly
+      amount). Claude's read of the billing account was blocked.
+- [ ] Confirm **IO** (British Indian Ocean Territory, +246) on the SMS list is intended; IN already covers India.
+- [ ] Delete the empty `project/CLAUDE.md/` folder (Claude's delete was blocked).
+- [ ] CRM choice, when ready.
 - Google Places pricing: the Details/Nearby field masks bill at Enterprise tiers (SPEC.md section 1).
 
 ## Open housekeeping
-- [ ] The user should delete the empty `project/CLAUDE.md/` folder (deleting it was blocked); project instructions live in `.claude/CLAUDE.md`.
-- [ ] `/scan/[id]` and `/report/[id]` return HTTP 200 for unknown ids and locked reports (see Phase 4 notes). Optional `proxy.ts` in Phase 6.
-- [ ] Worker logs say `service: "web"` under `pnpm worker:dev` (SERVICE_NAME only set in compose). Minor.
+- [ ] `/scan/[id]`, `/report/[id]` and `/report/[id]/print` return HTTP 200 for unknown ids, locked reports and a missing token (no
+      data is sent). Optional `proxy.ts` in Phase 6.
+- [ ] Gate button stays on "Sending…" if the visitor closes the reCAPTCHA challenge.
+- [ ] Worker logs say `service: "web"` under plain `pnpm worker:dev` (SERVICE_NAME only set in compose and `pnpm start:app`). Minor.
 
 ## Environment notes (Windows + Podman)
 - Use `podman compose` (Docker isn't installed). Podman VM: `podman machine start`.
+- `pnpm start:app` does all of host dev in one terminal (services, migrate deploy, `dev` + `worker:dev`).
+  Without the worker, scans stay `queued` with empty progress forever (no error anywhere).
 - Backing services for host dev: `podman compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis moli`.
 - The web container also binds :3000. Stop it (`podman compose stop web worker`) before `pnpm dev`.
 - Stopping a background `pnpm dev` task can leave the Next child process running and holding the port.
   Kill project node processes in PowerShell:
   `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | ? { $_.CommandLine -like "*Business Report\project*" } | % { taskkill /PID $_.ProcessId /T /F }`
+- Phone gate fails on `localhost` with `auth/invalid-app-credential` (firebase-js-sdk#8387), even for test numbers.
+  Test it on `http://dev.thesalesinc.com:3000` (hosts file `127.0.0.1 dev.thesalesinc.com`; added to Firebase
+  authorized domains + Firebase browser key referrers 2026-10-23; `allowedDevOrigins` in next.config.ts).
 - `pnpm test` needs Redis on localhost:6379 (rate-limit tests use DB 15).
 - Local `.env` uses Cloudflare's always-pass Turnstile test keys. Don't read `.env` (denied in settings); edit specific keys with sed.
-- `NEXT_PUBLIC_*` and `ONLINE_MODE` are Docker build args (inlined into the static landing page). `DEFAULT_COUNTRY` no longer is (2026-10-23).
+- `NEXT_PUBLIC_*` and `ONLINE_MODE` are Docker build args (inlined into the client bundle). `DEFAULT_COUNTRY` no longer is (2026-10-23).
+  After changing one in `.env`, restart `pnpm dev` (or rebuild the image).
+- Firebase Auth settings (SMS regions, authorized domains, test numbers) aren't in the Firebase MCP tools; they were read and changed
+  through the Identity Toolkit admin API (`identitytoolkit.googleapis.com/admin/v2/projects/tsi-project-cd47e/config`) with the
+  Firebase CLI login (`firebase login`, account ishanchaudhary@thesalesinc.com, has the cloud-platform scope).
+- `pnpm prisma migrate dev` refuses to run non-interactively: generate SQL with `prisma migrate diff --from-config-datasource
+  --to-schema prisma/schema.prisma --script`, save it as a migration folder, then `pnpm prisma migrate deploy`.

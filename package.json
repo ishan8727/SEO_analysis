@@ -12,6 +12,7 @@
     "build": "next build",
     "build:worker": "tsup",
     "start": "next start",
+    "start:app": "tsx scripts/start-app.ts",
     "worker": "node dist-worker/index.mjs",
     "worker:dev": "tsx watch --env-file-if-exists=.env src/worker/index.ts",
     "lint": "eslint",
