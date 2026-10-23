@@ -122,7 +122,10 @@ Also committed: `architecture.md` (service map) and `setup.md` (run it on Window
 
 Hosting decided 2026-10-24 (user): **GCP only**, Railway dropped. One Compute Engine VM (`e2-medium`, asia-south1) running
 compose + Caddy for HTTPS, images from Cloud Build / Artifact Registry, secrets in Secret Manager, Postgres + Redis on the VM
-with nightly `pg_dump` to Cloud Storage. Full task list in `phases/phase-6.md`. Notes carried over:
+with nightly `pg_dump` to Cloud Storage, in project `tsi-project-cd47e` (confirmed 2026-10-24). Full task list in `phases/phase-6.md`.
+- [ ] **User:** one-time GCP setup, `runbook.md` section 1 (VM, firewall, registry, secrets, backups, DNS). Phase 6 code waits on it
+  only for the live deploy.
+ Notes carried over:
 - e2e smoke: search → scan → teaser → **Firebase gate** (not WhatsApp/OTP). The gate can't be automated past reCAPTCHA; in CI, fake
   the token check (mock `verifyPhoneIdToken`) or use `auth.settings.appVerificationDisabledForTesting` with a test number.
 - [x] CSP + security headers (2026-10-24): `src/lib/security-headers.ts`, applied in `next.config.ts` `headers()`. Allowlist CSP

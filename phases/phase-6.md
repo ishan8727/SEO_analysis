@@ -8,7 +8,7 @@ Decided 2026-10-24 (user): GCP only, Railway dropped. One VM with compose (not C
 
 | Piece | Choice |
 |---|---|
-| GCP project | `tsi-project-cd47e` (already holds Firebase, the Maps/Places/PSI keys and billing) unless the user picks another |
+| GCP project | `tsi-project-cd47e` (confirmed by the user 2026-10-24; already holds Firebase, the Maps/Places/PSI keys and billing) |
 | VM | Compute Engine `e2-medium` (2 shared vCPU, 4 GB), Debian 12, 30 GB balanced disk, zone `asia-south1-a`, static external IPv4. Move to `e2-standard-2` if scans are CPU-starved |
 | Runtime | Docker Engine + compose plugin (not Podman). Base `docker-compose.yml` + new `docker-compose.prod.yml` |
 | HTTPS | Caddy container on :80/:443, automatic Let's Encrypt cert, `reverse_proxy web:3000`. Only Caddy publishes ports |
@@ -39,7 +39,7 @@ Rough cost: about $35–45/month (VM ~$25–30, disk, static IP, snapshots; logg
 6. **Deploy script** (`scripts/deploy.sh`, run from a laptop with `gcloud`): `gcloud builds submit`, then over IAP SSH
    (`gcloud compute ssh --tunnel-through-iap`) refresh `.env` from Secret Manager, `docker compose pull`, `docker compose up -d`.
    Migrations keep running in web's start command (`prisma migrate deploy`). Rollback = rerun with the previous SHA.
-7. **VM bootstrap** (`scripts/vm-bootstrap.sh`, documented in the runbook): install Docker + compose plugin, Ops Agent,
+7. **VM bootstrap** (manual steps in `runbook.md` section 1.13; script it as `scripts/vm-bootstrap.sh` if useful): install Docker + compose plugin, Ops Agent,
    `unattended-upgrades`, a 2 GB swap file; `gcloud auth configure-docker asia-south1-docker.pkg.dev`; the backup cron
    (`pg_dump | gzip | gcloud storage cp` to the bucket).
    - VM service account with only: Artifact Registry Reader, Secret Manager Secret Accessor, Logging Writer, Monitoring Metric
@@ -62,7 +62,7 @@ Rough cost: about $35–45/month (VM ~$25–30, disk, static IP, snapshots; logg
     mode so CI needs no real keys; for the gate, mock `verifyPhoneIdToken` (reCAPTCHA can't be automated).
 15. **Load test** `POST /api/scans` with autocannon against the VM; confirm 429s and that the VM stays responsive.
 16. **PostHog events**: search_started, scan_created, scan_done, gate_shown, verified, report_viewed.
-17. **Runbook** (README): deploy, roll back, rotate keys (Secret Manager → redeploy), restore a backup into a fresh VM, purge data,
+17. **Runbook** (`runbook.md`; section 1, one-time GCP setup, written 2026-10-24): deploy, roll back, rotate keys (Secret Manager → redeploy), restore a backup into a fresh VM, purge data,
     replay a failed scan, read logs, resize the VM.
 18. **Cleanup**: replace Railway mentions in code comments (`Dockerfile`, `docker-compose.yml`, `src/lib/api.ts`,
     `src/app/api/health/route.ts`, `prisma/schema.prisma`, `docker/moli/start.sh`, `.env.example`); drop `railway.internal` from
