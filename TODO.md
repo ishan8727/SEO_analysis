@@ -9,7 +9,7 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 |---|---|---|
 | 1 Setup and infrastructure | phases/phase-1.md | ✅ Done, committed (`a7051d4`) |
 | 2 Intake | phases/phase-2.md | 🟡 Code done, verified locally, committed (`b57b306`); a few checks left (see below) |
-| 3 Audit engine | phases/phase-3.md | ✅ Done; acceptance checks passed with real keys (see below). Code in `38ed8cd`, follow-ups uncommitted |
+| 3 Audit engine | phases/phase-3.md | ✅ Done; acceptance checks passed with real keys (see below). Committed (`38ed8cd`, `8689c98`) |
 | 4 Scoring, report, live scan page | phases/phase-4.md | ⬜ Not started |
 | 5 Lead gate, WhatsApp, PDF, CRM | phases/phase-5.md | ⬜ Not started |
 | 6 Hardening, tests, deploy | phases/phase-6.md | ⬜ Not started |
