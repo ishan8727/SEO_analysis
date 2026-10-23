@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { Gate } from "@/components/scan/Gate";
 import { ScanLive } from "@/components/scan/ScanLive";
 import { env } from "@/lib/env";
@@ -23,12 +24,15 @@ export default async function ScanPage({ params }: PageProps<"/scan/[id]">) {
   const row = await loadScanRow(id);
   if (!row) notFound();
 
+  // verifyUnlock reads Date.now() for expiry; that must happen at request time, not in a prerender.
+  await connection();
   const unlocked = verifyUnlock((await cookies()).get(unlockCookieName(id))?.value, id) !== null;
   const initial = unlocked ? toReport(row) : toTeaser(row);
   const { name, address, websiteUrl } = initial.business;
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-10 sm:py-16">
+    // Dark brand theme over the ASCII background; top padding clears the fixed logo (ScanLive).
+    <main className="dark brand-theme mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-28 pb-10 text-foreground sm:pb-16 md:pt-36">
       <header className="flex flex-col gap-1">
         <p className="text-sm text-muted-foreground">Local SEO audit</p>
         <h1 className="text-2xl font-semibold tracking-tight break-words sm:text-3xl">{name}</h1>

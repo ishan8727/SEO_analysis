@@ -128,23 +128,13 @@
     @apply font-sans;
   }
 }
-/* Landing page ASCII background (src/components/landing/SalesAsciiBackground.tsx). */
-@keyframes ascii-drift-arrows {
-  to { translate: 2% -2%; } /* up-right, with the arrows */
-}
-@keyframes ascii-drift-sparkle {
-  to { translate: -2% 2%; }
-}
-@keyframes ascii-pulse {
-  0%, 90%, 100% { opacity: 0.6; }
-  95% { opacity: 0.85; }
-}
-.ascii-drift-arrows { animation: ascii-drift-arrows 12s ease-in-out infinite alternate; }
-.ascii-drift-sparkle { animation: ascii-drift-sparkle 18s ease-in-out infinite alternate; }
-.ascii-pulse { animation: ascii-pulse 6s ease-in-out infinite; }
-.ascii-bg[data-paused] * { animation-play-state: paused; }
-@media (prefers-reduced-motion: reduce) {
-  .ascii-drift-arrows, .ascii-drift-sparkle, .ascii-pulse { animation: none; }
+/* ASCII background (src/components/landing/SalesAsciiBackground.tsx). */
+/* Cursor spotlight: a 400px glow moved with transform from the pointer (no repaint, no blend). */
+.ascii-spot {
+  width: 400px;
+  height: 400px;
+  border-radius: 9999px;
+  background: radial-gradient(circle closest-side, rgb(255 255 255 / 6%), rgb(251 43 47 / 4%) 64%, transparent);
 }
 .ascii-bg-overlay {
   background:
@@ -160,4 +150,84 @@
       radial-gradient(ellipse 85% 42% at 50% 50%, rgb(0 0 0 / 88%) 40%, transparent),
       radial-gradient(ellipse at center, transparent 65%, rgb(0 0 0 / 70%));
   }
+}
+
+/* Dark brand scope for the landing and scan pages, used together with `dark` (after `.dark`, so it
+   wins). Cards become translucent black panels over the ASCII background. */
+.brand-theme {
+  --primary: #FB2B2F;
+  --primary-foreground: #ffffff;
+  --ring: #FB2B2F;
+  --card: rgb(0 0 0 / 60%);
+  --border: rgb(255 255 255 / 10%);
+  --muted-foreground: rgb(255 255 255 / 80%);
+  color-scheme: dark;
+}
+.brand-theme [data-slot="card"] {
+  backdrop-filter: blur(4px);
+}
+
+/* Loading states in the brand scope: skeletons become a dot grid with a red sweep (ASCII feel).
+   The sweep is a pseudo-element moved with translate, so it animates on the GPU without repaints. */
+.brand-theme [data-slot="skeleton"] {
+  position: relative;
+  overflow: hidden;
+  animation: none;
+  background:
+    radial-gradient(circle, rgb(255 255 255 / 14%) 1px, transparent 1.5px) 0 0 / 8px 8px,
+    rgb(255 255 255 / 4%);
+}
+.brand-theme [data-slot="skeleton"]::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 50%;
+  background: linear-gradient(90deg, transparent, rgb(251 43 47 / 16%), transparent);
+  translate: -100% 0;
+  animation: brand-sweep 1.6s linear infinite;
+}
+@keyframes brand-sweep {
+  to { translate: 200% 0; }
+}
+/* DotsLoader: src/components/loader/DotsLoader.tsx */
+.brand-dot { animation: brand-dot 0.9s ease-in-out infinite; }
+@keyframes brand-dot {
+  0%, 100% { opacity: 0.3; translate: 0 0; }
+  50% { opacity: 1; translate: 0 -2px; }
+}
+/* Phone gate while a code is being sent or checked: a faint red scan line sweeps the card. */
+.gate-card[data-busy]::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 35%;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgb(251 43 47 / 10%) 50%, transparent);
+  translate: 0 -100%;
+  animation: gate-scan 1.6s ease-in-out infinite;
+}
+@keyframes gate-scan {
+  to { translate: 0 286%; } /* its own height is 35% of the card: 286% reaches the bottom */
+}
+@media (prefers-reduced-motion: reduce) {
+  .brand-theme [data-slot="skeleton"]::after, .brand-dot, .gate-card[data-busy]::before { animation: none; }
+}
+/* Report map in the brand scope: OSM tiles turned dark, quieter attribution. */
+.brand-theme .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
+}
+.brand-theme .leaflet-control-attribution {
+  background: rgb(0 0 0 / 60%);
+  color: rgb(255 255 255 / 70%);
+}
+.brand-theme .leaflet-control-attribution a { color: rgb(255 255 255 / 85%); }
+.brand-theme .leaflet-tooltip {
+  background: #000;
+  border-color: rgb(255 255 255 / 15%);
+  color: #fff;
+}
+.brand-theme .leaflet-tooltip-top::before { border-top-color: #000; }
+/* Dark brand pages: black behind everything, so overscroll and tall pages never flash white. */
+body:has(.brand-theme) {
+  background-color: #000;
 }

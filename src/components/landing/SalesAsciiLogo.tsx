@@ -1,40 +1,47 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
+import { logoFont } from "@/components/landing/logo-font";
 import { drawLogoMasks, FRAME_LEFT, type LogoMasks } from "@/components/landing/logo-masks";
-import { useMediaQuery, usePageVisible } from "@/components/landing/media-hooks";
+import { useMediaQuery } from "@/components/landing/media-hooks";
 import { AsciiArt } from "@/components/ui/ascii-art";
-import { cn } from "@/lib/utils";
 
 // The Sales Inc. logo in ASCII blocks, over SalesAsciiBackground. Masks are drawn at runtime
-// (logo-masks.ts), one AsciiArt per color.
-// Intro: white SALES INC. resolves as matrix rain (0–1.2s), the red frame, THE and arrows type in
-// (0.6–1.8s). Then idle loops: the arrows shoot up-right every 4s (1s on hover), a red/white split
-// glitch every 7s, a quick fade "refresh" of the white words every 12s.
+// (logo-masks.ts), one AsciiArt per color. It reveals once (white SALES INC. as matrix rain, then the
+// red frame, THE and arrows typing in) and then stays still. Hover nudges the red arrows up-right
+// and brightens the glow. The glow is a CSS drop-shadow on the red layer, applied once it is still
+// (a filter on a canvas that redraws every frame would be re-run every frame).
+//   hero:    the landing page's big logo, in the page flow.
+//   compact: fixed top-left, links home (scan page, mounted once the loader is done).
 
 const RED = "#FB2B2F";
-// Characters across. The grid has only ~0.27 rows per column across the logo, so anything much
-// lower leaves the small "THE" unreadable. Same on every screen: the logo is small, so it's cheap.
-const RESOLUTION = 150;
-const RED_AT_MS = 600;
-const IDLE_AT_MS = 1800;
 
-function Layer({ src, color, animated, style, duration }: {
+const VARIANTS = {
+  hero: { resolution: 150, arrowShift: 14, delay: 0, whiteS: 1.2, redAt: 600, redS: 1.2, glow: 4 },
+  // 96, not the brief's 48: at 48 "THE" is under one row and SALES reads as "$ALE$".
+  // 3px of arrow shift at 180px wide is ~20 mask px.
+  compact: { resolution: 96, arrowShift: 20, delay: 300, whiteS: 0.75, redAt: 250, redS: 0.75, glow: 2 },
+} as const;
+
+type Stage = "hidden" | "white" | "red" | "still";
+
+function Layer({ src, color, resolution, style, duration }: {
   src: string;
   color: string;
-  animated: boolean;
-  style: "matrix" | "typewriter" | "fade" | "none";
+  resolution: number;
+  style?: "matrix" | "typewriter"; // omitted: drawn at once
   duration?: number;
 }) {
   return (
     <AsciiArt
       src={src}
-      resolution={RESOLUTION}
+      resolution={resolution}
       charset="blocks"
       color={color}
       objectFit="contain"
-      animated={animated}
-      animationStyle={animated ? style : "none"}
+      animated={style !== undefined}
+      animationStyle={style ?? "none"}
       animationDuration={duration}
       animateOnView={false}
       className="absolute inset-0 h-full w-full"
@@ -42,82 +49,80 @@ function Layer({ src, color, animated, style, duration }: {
   );
 }
 
-export function SalesAsciiLogo({ fontFamily }: { fontFamily: string }) {
+export function SalesAsciiLogo({ variant = "hero" }: { variant?: keyof typeof VARIANTS }) {
+  const v = VARIANTS[variant];
   const animate = !useMediaQuery("(prefers-reduced-motion: reduce)");
-
-  const visible = usePageVisible();
   const [masks, setMasks] = useState<LogoMasks | null>(null);
-  const [stage, setStage] = useState<"white" | "red" | "idle">("white");
+  const [stage, setStage] = useState<Stage>("hidden");
   const [hovered, setHovered] = useState(false);
-  const [shifted, setShifted] = useState(false);
-  const [glitch, setGlitch] = useState(false);
-  const [whiteKey, setWhiteKey] = useState(0); // bumped to replay the white layer's fade
-
-  const showRed = !animate || stage !== "white";
-  const idle = !animate || stage === "idle";
-  const looping = animate && stage === "idle" && visible;
 
   useEffect(() => {
     let cancelled = false;
-    drawLogoMasks(fontFamily)
+    drawLogoMasks(logoFont.style.fontFamily, v.arrowShift)
       .then((m) => !cancelled && setMasks(m))
       .catch((err) => console.warn("logo masks failed:", err));
     return () => {
       cancelled = true;
     };
-  }, [fontFamily]);
+  }, [v.arrowShift]);
 
   useEffect(() => {
-    if (!masks || !animate) return;
-    const red = setTimeout(() => setStage("red"), RED_AT_MS);
-    const idle = setTimeout(() => setStage("idle"), IDLE_AT_MS);
-    return () => {
-      clearTimeout(red);
-      clearTimeout(idle);
-    };
-  }, [masks, animate]);
+    if (!masks) return;
+    const steps: [Stage, number][] = animate
+      ? [["white", v.delay], ["red", v.delay + v.redAt], ["still", v.delay + v.redAt + v.redS * 1000]]
+      : [["still", v.delay]];
+    const timers = steps.map(([next, at]) => setTimeout(() => setStage(next), at));
+    return () => timers.forEach(clearTimeout);
+  }, [masks, animate, v]);
 
-  // Arrows shoot up-right and back.
-  useEffect(() => {
-    if (!looping) return;
-    let back: ReturnType<typeof setTimeout> | undefined;
-    const interval = setInterval(
-      () => {
-        setShifted(true);
-        back = setTimeout(() => setShifted(false), 250);
-      },
-      hovered ? 1000 : 4000,
+  const showRed = stage === "red" || stage === "still";
+  const still = stage === "still";
+  const redSrc = masks && (hovered && still ? masks.redShifted : masks.red);
+
+  const art = masks && redSrc && stage !== "hidden" && (
+    // AsciiArt lays its grid out for a square box; the 2:1 logo fills the middle half (the overflow
+    // clip hides the rest, including matrix rain outside the logo).
+    <div className="pointer-events-none absolute inset-x-0 top-1/2 aspect-square -translate-y-1/2">
+      {showRed && (
+        <div
+          className="absolute inset-0 transition-[filter] duration-200 ease-out"
+          style={{
+            filter: still ? `drop-shadow(0 0 ${v.glow}px rgb(251 43 47 / ${hovered ? 0.9 : 0.5}))` : undefined,
+          }}
+        >
+          <Layer
+            src={redSrc}
+            color={RED}
+            resolution={v.resolution}
+            style={animate ? "typewriter" : undefined}
+            duration={v.redS}
+          />
+        </div>
+      )}
+      <Layer
+        src={masks.white}
+        color="#ffffff"
+        resolution={v.resolution}
+        style={animate ? "matrix" : undefined}
+        duration={v.whiteS}
+      />
+    </div>
+  );
+
+  const hover = { onPointerEnter: () => setHovered(true), onPointerLeave: () => setHovered(false) };
+
+  if (variant === "compact") {
+    return (
+      <Link
+        href="/"
+        aria-label="The Sales Inc. – Home"
+        className="fixed top-5 left-6 z-50 block aspect-[2/1] w-[130px] overflow-hidden md:top-6 md:left-8 md:w-[180px]"
+        {...hover}
+      >
+        {art}
+      </Link>
     );
-    return () => {
-      clearInterval(interval);
-      clearTimeout(back);
-      setShifted(false);
-    };
-  }, [looping, hovered]);
-
-  // Red/white split flicker.
-  useEffect(() => {
-    if (!looping) return;
-    let off: ReturnType<typeof setTimeout> | undefined;
-    const interval = setInterval(() => {
-      setGlitch(true);
-      off = setTimeout(() => setGlitch(false), 150);
-    }, 7000);
-    return () => {
-      clearInterval(interval);
-      clearTimeout(off);
-      setGlitch(false);
-    };
-  }, [looping]);
-
-  // Remounting the white layer replays a short fade.
-  useEffect(() => {
-    if (!looping) return;
-    const interval = setInterval(() => setWhiteKey((k) => k + 1), 12000);
-    return () => clearInterval(interval);
-  }, [looping]);
-
-  const redSrc = masks && (shifted ? masks.redShifted : masks.red);
+  }
 
   return (
     <div
@@ -126,44 +131,9 @@ export function SalesAsciiLogo({ fontFamily }: { fontFamily: string }) {
       className="relative aspect-[2/1] w-[45vw] max-w-md shrink-0 self-start overflow-hidden"
       // Pulled left by the mask's margin so the frame lines up with the heading below.
       style={{ translate: `-${(FRAME_LEFT * 100).toFixed(2)}% 0` }}
-      onPointerEnter={() => setHovered(true)}
-      onPointerLeave={() => setHovered(false)}
+      {...hover}
     >
-      {masks && redSrc && (
-        // AsciiArt lays its grid out for a square box; the 2:1 logo fills the middle half (the
-        // overflow clip hides the rest, including matrix rain outside the logo).
-        <div className="pointer-events-none absolute inset-x-0 top-1/2 aspect-square -translate-y-1/2">
-          {showRed && (
-            <div
-              className={cn(
-                "absolute inset-0 blur-[4px] transition-opacity duration-500",
-                !idle ? "opacity-0" : hovered ? "opacity-90" : "opacity-50",
-              )}
-            >
-              <Layer src={redSrc} color={RED} animated={false} style="none" />
-            </div>
-          )}
-          {showRed && (
-            <Layer src={redSrc} color={RED} animated={animate} style="typewriter" duration={1.2} />
-          )}
-          <Layer
-            key={whiteKey}
-            src={masks.white}
-            color="#ffffff"
-            animated={animate}
-            style={whiteKey === 0 ? "matrix" : "fade"}
-            duration={whiteKey === 0 ? 1.2 : 0.4}
-          />
-          {looping && (
-            <div
-              className="absolute inset-0 mix-blend-screen"
-              style={{ opacity: glitch ? 1 : 0, transform: glitch ? "translate(3px, -2px)" : undefined }}
-            >
-              <Layer src={masks.white} color={RED} animated={false} style="none" />
-            </div>
-          )}
-        </div>
-      )}
+      {art}
     </div>
   );
 }

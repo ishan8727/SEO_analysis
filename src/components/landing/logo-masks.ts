@@ -1,6 +1,6 @@
 // The Sales Inc. logo as white-on-black masks for AsciiArt, which draws one color per instance:
 // `white` has the words SALES and INC., `red` has the frame, "THE" and the arrows. Both share one size
-// and layout, so the layers line up. `redShifted` is `red` with the arrows nudged up-right (idle loop).
+// and layout, so the layers line up. `redShifted` is `red` with the arrows nudged up-right (hover).
 //
 // Positions are traced from the brand artwork (target/Images/TSI logo.gif, 1080px square, frame at
 // x 108–972, y 338–775) and scaled into the mask with some margin for the glow.
@@ -18,7 +18,6 @@ const Y = (y: number) => OFFSET_Y + (y - 338) * SCALE;
 const W = (w: number) => Math.max(w * SCALE, 12); // thinner strokes fall between ASCII cells
 
 const FRAME_STROKE = 16;
-const ARROW_SHIFT = 14; // px up-right: about one character cell
 const WEIGHT = 800;
 
 export interface LogoMasks {
@@ -110,8 +109,9 @@ function drawWhite(family: string): string {
 
 // `family` is the CSS font-family list from next/font. The font is loaded first: the canvas would
 // silently fall back to another font otherwise.
-export async function drawLogoMasks(family: string): Promise<LogoMasks> {
+// `arrowShift` is in mask pixels (the mask is 1200 wide).
+export async function drawLogoMasks(family: string, arrowShift: number): Promise<LogoMasks> {
   await document.fonts.load(`${WEIGHT} 100px ${family}`, "THESALESINC.");
   await document.fonts.ready;
-  return { white: drawWhite(family), red: drawRed(family, 0), redShifted: drawRed(family, ARROW_SHIFT) };
+  return { white: drawWhite(family), red: drawRed(family, 0), redShifted: drawRed(family, arrowShift) };
 }

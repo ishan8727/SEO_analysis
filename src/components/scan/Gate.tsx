@@ -4,9 +4,11 @@ import { AsYouType, getCountries, getCountryCallingCode, isSupportedCountry, typ
 import { Lock } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DotsLoader } from "@/components/loader/DotsLoader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+// Select popups render in a portal outside the page's dark scope, hence className="dark".
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { allowedPhoneCountries, isAllowedPhoneCountry, parsePhone } from "@/lib/phone";
 
@@ -161,7 +163,8 @@ export function Gate({
   }
 
   return (
-    <Card>
+    // data-busy: a faint scan line sweeps the card while a code is sent or checked (globals.css).
+    <Card className="gate-card relative overflow-hidden" data-busy={busy || undefined}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Lock className="size-4" aria-hidden /> Unlock your full report
@@ -183,7 +186,7 @@ export function Gate({
               <SelectTrigger aria-label="Your role" className="w-full">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="dark">
                 {ROLES.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
@@ -204,7 +207,7 @@ export function Gate({
                 <SelectTrigger aria-label="Country code" className="w-full sm:w-56">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="dark">
                   {countries.map((c) => (
                     <SelectItem key={c.code} value={c.code}>
                       {c.label}
@@ -229,7 +232,13 @@ export function Gate({
               />
             </div>
             <Button type="submit" disabled={busy || !parsed}>
-              {busy ? "Sending…" : "Text me a code"}
+              {busy ? (
+                <>
+                  <DotsLoader /> Sending
+                </>
+              ) : (
+                "Text me a code"
+              )}
             </Button>
             <p className="text-xs text-muted-foreground">
               We&apos;ll text you a 6-digit code. Standard SMS rates may apply. By continuing you agree to our{" "}
@@ -263,7 +272,13 @@ export function Gate({
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             />
             <Button type="submit" disabled={busy || code.length !== 6}>
-              {busy ? "Checking…" : "Unlock my report"}
+              {busy ? (
+                <>
+                  <DotsLoader /> Checking
+                </>
+              ) : (
+                "Unlock my report"
+              )}
             </Button>
             <div className="flex items-center justify-between text-sm">
               <button

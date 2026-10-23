@@ -7,11 +7,35 @@ import React, {
   useCallback,
   useId,
 } from "react";
-import { motion, useInView } from "motion/react";
 import { cn } from "@/lib/utils";
 
 const useIsomorphicLayoutEffect =
   typeof window !== "undefined" ? useLayoutEffect : useEffect;
+
+// True once the element is at least 10% in view. Replaces motion's useInView, so this component
+// doesn't pull in the motion library.
+function useInViewOnce(
+  ref: React.RefObject<HTMLElement | null>,
+  enabled: boolean
+): boolean {
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!enabled || inView || !el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setInView(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [ref, enabled, inView]);
+  return inView;
+}
 
 const ASCII_CHARSETS = {
   standard: " .,:;i1tfLCG08@",
@@ -92,6 +116,8 @@ type AsciiArtProps = {
   animateOnView?: boolean;
   /** How the image should fit within the ASCII grid */
   objectFit?: "cover" | "contain" | "fill";
+  /** Highest device pixel ratio to render at (default 2; lower is cheaper) */
+  maxDpr?: number;
 };
 const MATRIX_CHARSET = "ﾊﾐﾋｰｳｼﾅﾓﾆｻﾜﾂｵﾘｱﾎﾃﾏｹﾒｴｶｷﾑﾕﾗｾﾈｽﾀﾇﾍ";
 
@@ -117,6 +143,7 @@ export const AsciiArt: React.FC<AsciiArtProps> = ({
   className,
   animateOnView = true,
   objectFit = "cover",
+  maxDpr = 2,
 }) => {
   const uniqueId = useId();
   const [asciiData, setAsciiData] = useState<AsciiPixel[][]>([]);
@@ -126,7 +153,7 @@ export const AsciiArt: React.FC<AsciiArtProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
-  const isInView = useInView(containerRef, { once: true, amount: 0.1 });
+  const isInView = useInViewOnce(containerRef, animated && animateOnView && isLoaded);
 
   const shouldStartAnimation = animated && animateOnView ? isInView : animated;
   const shouldShowStatic = !animated || animationStyle === "none";
@@ -261,8 +288,8 @@ export const AsciiArt: React.FC<AsciiArtProps> = ({
       const ctx = canvas.getContext("2d");
       if (!ctx) return;
 
-      // Capped at 2: full-screen canvases at 3x use a lot of memory on phones.
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      // Capped (default 2): full-screen canvases at 3x use a lot of memory on phones.
+      const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
       const containerWidth = container.clientWidth;
       const containerHeight = container.clientHeight;
 
@@ -327,12 +354,9 @@ export const AsciiArt: React.FC<AsciiArtProps> = ({
                 MATRIX_CHARSET[
                   Math.floor(Math.random() * MATRIX_CHARSET.length)
                 ];
-              // The text color, not the stock matrix green (brand palette).
+              // The text color, not the stock matrix green (brand palette). No shadowBlur glow:
+              // it is the most expensive canvas operation and this redraws every frame.
               displayColor = resolvedTextColor;
-              ctx.shadowColor = resolvedTextColor;
-              ctx.shadowBlur = 5;
-            } else {
-              ctx.shadowBlur = 0;
             }
           }
 
@@ -345,7 +369,6 @@ export const AsciiArt: React.FC<AsciiArtProps> = ({
       }
 
       ctx.globalAlpha = 1;
-      ctx.shadowBlur = 0;
     },
     [
       asciiData,
@@ -354,6 +377,7 @@ export const AsciiArt: React.FC<AsciiArtProps> = ({
       textColor,
       fontFamily,
       animationStyle,
+      maxDpr,
     ]
   );
 
@@ -383,9 +407,16 @@ export const AsciiArt: React.FC<AsciiArtProps> = ({
               ? 3000
               : 1000;
 
+      let lastDraw = 0;
       const animate = (currentTime: number) => {
         const elapsed = currentTime - startTime;
         const progress = Math.min(elapsed / duration, 1);
+        // 30fps is plenty for a reveal and halves the full-grid redraws.
+        if (progress < 1 && currentTime - lastDraw < 1000 / 30) {
+          animationRef.current = requestAnimationFrame(animate);
+          return;
+        }
+        lastDraw = currentTime;
 
         if (animationStyle === "matrix") {
           drawCanvas(1, progress);
@@ -476,18 +507,23 @@ export const AsciiArt: React.FC<AsciiArtProps> = ({
     />
   );
 
+  // Fade-in wrapper as a CSS animation (tw-animate-css) instead of motion.
   if (animationStyle === "fade" && animated && !hasAnimated) {
     return (
-      <motion.div
+      <div
         ref={containerRef}
-        className={cn("overflow-hidden", className)}
-        style={{ backgroundColor }}
-        initial={{ opacity: 0 }}
-        animate={shouldStartAnimation ? { opacity: 1 } : { opacity: 0 }}
-        transition={{ duration: (animationDuration ?? 1) * 0.3 }}
+        className={cn(
+          "overflow-hidden",
+          shouldStartAnimation ? "animate-in fade-in-0" : "opacity-0",
+          className
+        )}
+        style={{
+          backgroundColor,
+          animationDuration: `${(animationDuration ?? 1) * 0.3}s`,
+        }}
       >
         {canvasElement}
-      </motion.div>
+      </div>
     );
   }
 

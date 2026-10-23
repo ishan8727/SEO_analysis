@@ -1,7 +1,8 @@
 "use client";
 
-import { Download, LoaderCircle } from "lucide-react";
+import { Download } from "lucide-react";
 import { useEffect, useState } from "react";
+import { DotsLoader } from "@/components/loader/DotsLoader";
 import { buttonVariants } from "@/components/ui/button";
 
 const POLL_MS = 3_000;
@@ -52,7 +53,7 @@ export function PdfButton({ scanId, pdfUrl: initialUrl }: { scanId: string; pdfU
         "Your PDF isn't ready yet. Refresh the page in a minute."
       ) : (
         <>
-          <LoaderCircle className="size-4 animate-spin" aria-hidden /> Preparing your PDF…
+          <DotsLoader className="text-primary" /> Preparing your PDF…
         </>
       )}
     </p>

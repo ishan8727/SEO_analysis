@@ -126,7 +126,7 @@ function CompetitorsSection({ report, state }: { report: ScanReport; state: Step
           </thead>
           <tbody>
             {rows.map((r, i) => (
-              <tr key={r.placeId ?? "self"} className={cn("border-t", r.self && "bg-blue-50 font-medium")}>
+              <tr key={r.placeId ?? "self"} className={cn("border-t", r.self && "bg-blue-50 font-medium dark:bg-primary/15")}>
                 <td className="py-2 pr-2 tabular-nums">{i + 1}</td>
                 <td className="py-2 pr-2">{r.self ? `${r.name} (you)` : r.name}</td>
                 <td className="py-2 pr-2 text-right tabular-nums">{r.rating?.toFixed(1) ?? "–"}</td>
@@ -168,8 +168,8 @@ function SentimentSection({ sentiment, state }: { sentiment: SentimentResult | n
     >
       <p className="text-sm">{sentiment.summary}</p>
       <div className="grid gap-4 sm:grid-cols-2">
-        <TagList icon={<ThumbsUp className="size-4 text-emerald-600" aria-hidden />} title="Customers love" items={sentiment.loves} />
-        <TagList icon={<ThumbsDown className="size-4 text-red-600" aria-hidden />} title="Customers complain about" items={sentiment.complaints} />
+        <TagList icon={<ThumbsUp className="size-4 text-emerald-600 dark:text-emerald-400" aria-hidden />} title="Customers love" items={sentiment.loves} />
+        <TagList icon={<ThumbsDown className="size-4 text-red-600 dark:text-red-400" aria-hidden />} title="Customers complain about" items={sentiment.complaints} />
       </div>
     </Section>
   );
@@ -233,7 +233,7 @@ function CheckRow({ ok, partial = false, children }: { ok: boolean | null; parti
   return (
     <li className="flex items-center gap-2 text-sm">
       <Icon
-        className={cn("size-4 shrink-0", ok ? "text-emerald-600" : partial ? "text-amber-600" : "text-red-600")}
+        className={cn("size-4 shrink-0", ok ? "text-emerald-600 dark:text-emerald-400" : partial ? "text-amber-600 dark:text-amber-400" : "text-red-600 dark:text-red-400")}
         aria-label={ok ? "Yes" : partial ? "Partly" : "No"}
       />
       <span>{children}</span>
@@ -335,7 +335,7 @@ function PsiCard({ label, run }: { label: string; run: PsiStrategyResult | null 
       {run.cwvPass !== null && (
         <p className="text-xs">
           Core Web Vitals (real users):{" "}
-          <span className={run.cwvPass ? "text-emerald-600" : "text-red-600"}>{run.cwvPass ? "passed" : "failed"}</span>
+          <span className={run.cwvPass ? "text-emerald-600 dark:text-emerald-400" : "text-red-600 dark:text-red-400"}>{run.cwvPass ? "passed" : "failed"}</span>
         </p>
       )}
     </div>
@@ -380,7 +380,7 @@ function Fact({ label, value }: { label: string; value: string | null }) {
   return (
     <div className="flex flex-col gap-0.5">
       <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className={cn("break-words", !value && "text-red-600")}>{value ?? "Missing"}</dd>
+      <dd className={cn("break-words", !value && "text-red-600 dark:text-red-400")}>{value ?? "Missing"}</dd>
     </div>
   );
 }

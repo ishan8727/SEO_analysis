@@ -36,7 +36,7 @@ export default function LeafletMap({ pins }: { pins: MapPin[] }) {
           radius={p.self ? 10 : 7}
           pathOptions={
             p.self
-              ? { color: "#ffffff", weight: 3, fillColor: "#2563eb", fillOpacity: 1 }
+              ? { color: "#ffffff", weight: 3, fillColor: "#FB2B2F", fillOpacity: 1 }
               : { color: "#ffffff", weight: 2, fillColor: "#71717a", fillOpacity: 0.9 }
           }
         >

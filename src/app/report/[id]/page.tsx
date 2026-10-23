@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
+import { SalesAsciiBackground } from "@/components/landing/SalesAsciiBackground";
+import { SalesAsciiLogo } from "@/components/landing/SalesAsciiLogo";
 import { ReportView } from "@/components/report/ReportView";
 import { loadScanRow, SCAN_ID_RE, toReport } from "@/lib/scan-view";
 import { unlockCookieName, verifyUnlock } from "@/lib/unlock";
@@ -26,8 +28,12 @@ export default async function ReportPage({ params }: PageProps<"/report/[id]">) 
   const report = toReport(row);
   const { name, address, websiteUrl } = report.business;
 
+  // Dark brand theme over the ASCII background, like the scan page. The print page (the PDF) renders
+  // ReportView without these, so it stays light.
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-10 sm:py-16">
+    <main className="dark brand-theme mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-28 pb-10 text-foreground sm:pb-16 md:pt-36">
+      <SalesAsciiBackground />
+      <SalesAsciiLogo variant="compact" />
       <header className="flex flex-col gap-1">
         <p className="text-sm text-muted-foreground">Full local SEO report</p>
         <h1 className="text-2xl font-semibold tracking-tight break-words sm:text-3xl">{name}</h1>
