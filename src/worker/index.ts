@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { log } from "@/lib/log";
 import { JOB, SCAN_QUEUE, type JobName, type ScanJobData } from "@/lib/queue";
 import { createQueueConnection } from "@/lib/redis";
-import { markScanFailed } from "@/lib/scan-progress";
+import { markScanFailed, setStepState } from "@/lib/scan-progress";
+import { STEPS_BY_MODE } from "@/types";
 import { competitorsJob } from "@/worker/jobs/competitors";
 import { domAuditJob } from "@/worker/jobs/dom-audit";
 import { finalizeJob } from "@/worker/jobs/finalize";
@@ -45,15 +46,24 @@ worker.on("completed", (job) => log.info({ jobId: job.id, name: job.name }, "job
 worker.on("error", (err) => log.error({ err: err.message }, "worker error"));
 worker.on("failed", (job, err) => {
   log.error({ jobId: job?.id, name: job?.name, attempt: job?.attemptsMade, err: err.message }, "job failed");
-  // If finalize gives up, the scan can never complete: tell the user instead of spinning forever.
-  const finalAttempt = job && job.attemptsMade >= (job.opts.attempts ?? 1);
-  if (job?.name === JOB.finalize && finalAttempt) {
-    const { scanId } = job.data as ScanJobData;
-    markScanFailed(scanId, "We couldn't finish this audit. Please try again in a few minutes.").catch((e) =>
-      log.error({ scanId, err: (e as Error).message }, "could not mark scan failed"),
-    );
+  const finalAttempt =
+    job && (err.name === "UnrecoverableError" || job.attemptsMade >= (job.opts.attempts ?? 1));
+  if (!job || !finalAttempt) return;
+
+  const { scanId } = job.data as ScanJobData;
+  const onError = (e: unknown) => log.error({ scanId, err: (e as Error).message }, "could not record failure");
+  if (job.name === JOB.finalize) {
+    // If finalize gives up, the scan can never complete: tell the user instead of spinning forever.
+    markScanFailed(scanId, "We couldn't finish this audit. Please try again in a few minutes.").catch(onError);
+  } else if (isAuditStep(job.name)) {
+    // The flow still reaches finalize (ignoreDependencyOnFailure); the report shows this step as failed.
+    setStepState(scanId, job.name, "failed").catch(onError);
   }
 });
+
+function isAuditStep(name: string): name is (typeof STEPS_BY_MODE.local)[number] {
+  return (STEPS_BY_MODE.local as readonly string[]).includes(name);
+}
 
 async function shutdown(signal: string) {
   log.info({ signal }, "worker shutting down");

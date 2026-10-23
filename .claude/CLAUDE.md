@@ -19,6 +19,7 @@ writing Next code. See AGENTS.md.
 - pnpm lint && pnpm typecheck
 - pnpm queue:ping          # enqueue a ping job and wait for the worker
 - pnpm moli:smoke [url]    # drive Moli over CDP: DOM, screenshot, PDF
+- pnpm scan:run <placeId|place-details.json|url>   # dev: create a scan (no Turnstile), wait, print blobs; needs the worker
 - docker compose up --build                                     # full stack (Podman: `podman compose`)
 - docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres redis moli
                            # backing services on 127.0.0.1 for host dev

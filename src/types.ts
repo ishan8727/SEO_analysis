@@ -124,7 +124,10 @@ export interface DomAuditResult {
   keywordHits: { ordering: boolean; booking: boolean };
   robotsTxt: boolean;
   sitemapXml: boolean;
-  /** Local mode only; null in online mode. Each part 0..1. */
+  /**
+   * Local mode only; null in online mode. Each part 0..1. A part Google has no data for
+   * (e.g. no phone) reads 0 and is left out of `score`.
+   */
   napMatch: { name: number; address: number; phone: number; score: number } | null;
 }
 
