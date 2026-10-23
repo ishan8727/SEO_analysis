@@ -9,7 +9,7 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 |---|---|---|
 | 1 Setup and infrastructure | phases/phase-1.md | ✅ Done, committed (`a7051d4`) |
 | 2 Intake | phases/phase-2.md | 🟡 Code done, verified locally, committed (`b57b306`); a few checks left (see below) |
-| 3 Audit engine | phases/phase-3.md | 🟡 Code done, verified against fixtures, committed (`38ed8cd`); real-key run left (see below) |
+| 3 Audit engine | phases/phase-3.md | ✅ Done; acceptance checks passed with real keys (see below). Code in `38ed8cd`, follow-ups uncommitted |
 | 4 Scoring, report, live scan page | phases/phase-4.md | ⬜ Not started |
 | 5 Lead gate, WhatsApp, PDF, CRM | phases/phase-5.md | ⬜ Not started |
 | 6 Hardening, tests, deploy | phases/phase-6.md | ⬜ Not started |
@@ -33,12 +33,13 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 
 ## Phase 3 — remaining
 
-- [ ] Real scan with keys: set `GOOGLE_SERVER_KEY`, `PSI_API_KEY` (may equal the server key) and `GEMINI_API_KEY`, run
-      `pnpm worker:dev` + `pnpm scan:run <placeId>`. Check: all five blobs filled, two screenshot assets, < 60 s,
-      and `competitors.items` never contains the scanned place id. (Keyless PSI returns 429, so PSI can't be tested without a key.)
-- [ ] Kill Moli for real mid-scan (`podman compose stop moli` while `dom` is running) and confirm `renderer: "fallback"`.
-      Verified so far by pointing the worker at a dead `MOLI_URL`, which hits the same catch path. Ask before stopping containers.
-- [ ] Check the Places primary types in `config/categories.json` against real Nearby Search results.
+- [x] Real scan with keys (2026-10-23, Indiranagar dental clinics): all five blobs + both screenshots in 37.5 s and 43 s;
+      Nearby Search returned 10, self dropped → 9 competitors. PSI is the slow step (~40 s per strategy, run in parallel).
+- [x] Moli killed for real mid-scan (2026-10-23, `podman kill` during `page.goto`): dom fell back to
+      `renderer: "fallback"`, scan `done` in 45 s with all five blobs. Moli restarted, `moli:smoke` passes.
+- [x] Category types checked against real Bengaluru Text Search results (2026-10-23): all names valid
+      (`mens_clothing_store` isn't). Lists widened to the primary types real places carry (e.g. CAs are
+      `consultant`, physios `medical_clinic`); "Restaurant" now has no filter (too many cuisine subtypes for 5).
 
 ### Phase 3 verified so far (host worker, `pnpm scan:run`)
 - Fixture place + example.com: gbp `done`, dom `done` via Moli (rendered DOM, JS-injected content included);
@@ -46,6 +47,9 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 - Fixture place without a website: psi + dom `skipped`, blobs null, scan `done`.
 - Online mode (haldirams.com): dom via Moli in ~7 s; with `MOLI_URL` dead → `renderer: "fallback"`, same facts, 1.6 s.
 - typecheck, lint, 84 tests, `next build`, worker build pass; no server key names or PSI/Places calls in `.next/static`.
+- Gemini: full Flash (`gemini-flash-latest` → 3.8) timed out at 60 s / returned 503; switched to pinned
+  `gemini-3.5-flash-lite` (1–2 s). 2.5 models are closed to new keys. Recorded in SPEC.md section 14.
+- One PSI mobile call returned 403 right after the key restrictions were changed (propagation); repeats succeeded.
 
 ### Phase 3 notes for Phase 4
 - A website on a denied host (e.g. a facebook.com page) is treated as no website: psi/dom `skipped`, but

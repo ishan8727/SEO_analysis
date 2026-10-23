@@ -23,7 +23,7 @@ The browser calls Google Places directly for autocomplete. Everything else goes 
 | Website scores + screenshots | PageSpeed Insights API (mobile + desktop) | Free, 25k/day, returns Lighthouse scores and screenshots |
 | Deep DOM audit + PDF | Moli headless browser (Rust, CDP) in our own container behind a Caddy token gate, driven by playwright-core; fallback to fetch + cheerio | ~15 MB idle; fallback covers rendering gaps |
 | Competitors | Places Nearby Search | No scraping of Google properties, ever |
-| Review sentiment | Gemini Flash via `@google/genai` (structured JSON output) | Fractions of a paisa per audit |
+| Review sentiment | Gemini Flash-Lite via `@google/genai` (structured JSON output), pinned in `GEMINI_MODEL` | Fractions of a paisa per audit |
 | Lead gate | WhatsApp click-to-chat (user-initiated, free) with OTP-template fallback; provider interface so Meta Cloud API or Interakt can be swapped | Free path first |
 | Map on report | Leaflet + OpenStreetMap tiles | No Google Maps JS billing or key exposure |
 | Files (screenshots, PDFs) | `Asset` table in Postgres | A Railway volume mounts on one service only; web and worker both need the files |
@@ -210,6 +210,7 @@ One brief per phase in `phases/`: tasks, files, acceptance criteria and the prom
 | `CLAUDE.md` at repo root | `.claude/CLAUDE.md` | The repo root has a leftover empty `CLAUDE.md/` folder; delete it and the file can move to the root |
 | `pnpm ping` | `pnpm queue:ping` | pnpm has a built-in `ping` command that shadows the script |
 | `TURNSTILE_SITE_KEY` | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (Phase 2) | The client reads it; `NEXT_PUBLIC_*`, `DEFAULT_COUNTRY` and `ONLINE_MODE` are Docker build args because the landing page is prerendered |
+| Gemini Flash (`gemini-flash-latest`) | `gemini-3.5-flash-lite`, pinned (Phase 3) | Full Flash timed out (>60 s) or returned 503 in testing; Flash-Lite answers in 1–2 s and is cheaper. The 2.5 models are closed to new keys |
 | `"env": { "NODE_ENV": "development" }` in .claude/settings.json | Removed | It applied to every command, including `next build` |
 | — | `"type": "module"` in package.json | tsx scripts use top-level await and the Prisma client uses `import.meta` |
 | — | Shared contracts in `src/types.ts`; scan flow wired in `enqueueScan()` with placeholder jobs that mark their step `skipped` | Later phases replace job bodies without touching the flow |

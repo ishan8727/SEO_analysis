@@ -16,7 +16,7 @@ const schema = z.object({
   GOOGLE_SERVER_KEY: z.string().default(""),
   PSI_API_KEY: z.string().default(""),
   GEMINI_API_KEY: z.string().default(""),
-  GEMINI_MODEL: z.string().default("gemini-flash-latest"),
+  GEMINI_MODEL: z.string().default("gemini-3.5-flash-lite"),
 
   MOLI_URL: z.string().default("http://localhost:9222"),
   MOLI_TOKEN: z.string().default(""),
