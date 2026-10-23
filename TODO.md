@@ -94,7 +94,7 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 - Gate (headless Edge, 390 px): renders on a locked scan, hidden once unlocked; country code defaults to the business's country; no
   horizontal scroll. "Text me a code" reaches Firebase from localhost (recaptchaConfig 200), then reCAPTCHA shows an image challenge to the
   headless browser, so the SMS step can't be automated here. Firebase SDK is not in the landing or scan page's initial chunks.
-- PDF: print page (`/report/[id]/print?token=INTERNAL_TOKEN`) → worker inlines CSS + fonts → Moli `setContent` + `pdf()` → `pdf` Asset in
+- PDF: print page (`/report/[id]/print`, `INTERNAL_TOKEN` in the `x-internal-token` header, never the URL) → worker inlines CSS + fonts → Moli `setContent` + `pdf()` → `pdf` Asset in
   2–3 s (A4, 2 pages for the demo). Download with cookie 200, without 401. `pnpm pdf:smoke` checks Moli.
 - Migration `20261023120000_phase5_firebase_lead` applied to the dev DB (drops `Verification`, adds `Lead.firebaseUid/countryCode`, unique scan+phone).
 

@@ -2,6 +2,9 @@
 // stylesheets become <style> blocks with their fonts as data URIs; external scripts, preloads and
 // icons are dropped. Inline scripts stay: Next streams the page body in and moves it into place with them.
 
+/** The worker sends INTERNAL_TOKEN to the print page in this header (never the URL, which gets logged). */
+export const INTERNAL_TOKEN_HEADER = "x-internal-token";
+
 export interface Fetchers {
   text: (url: string) => Promise<string>;
   bytes: (url: string) => Promise<{ mime: string; data: Buffer }>;

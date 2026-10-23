@@ -10,6 +10,7 @@ import { Prisma } from "@/generated/prisma/client";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { hashIdentifier } from "@/lib/hash";
+import { enqueuePdf, getScanQueue } from "@/lib/queue";
 import { setStepState } from "@/lib/scan-progress";
 import { loadScanRow, scoreScan } from "@/lib/scan-view";
 import { signUnlock, unlockCookieName } from "@/lib/unlock";
@@ -258,4 +259,15 @@ if (live) {
 }
 await finalize(scanId);
 console.log("  scan done");
+
+// Queue the PDF as a verified unlock would, so "Download PDF" appears (needs the worker running).
+try {
+  await enqueuePdf(scanId, "demo-lead");
+  console.log("  PDF queued (made by the worker in a few seconds)");
+} catch (err) {
+  console.log(`  PDF not queued: ${(err as Error).message}`);
+} finally {
+  await getScanQueue().close();
+}
 await db.$disconnect();
+process.exit(); // BullMQ leaves the Redis connection we hand it open

@@ -5,6 +5,7 @@ processes: the web app (`next start`) and the BullMQ worker (`node dist-worker/i
 Start every session by reading TODO.md (progress, what is left, environment gotchas).
 Read SPEC.md before any task; it is the source of truth. Build phases in order from
 `phases/phase-N.md` and stop at each phase's acceptance criteria.
+architecture.md maps every service, outside integration and data flow; keep it in sync.
 
 Next.js 16 differs from older versions (Cache Components, `proxy.ts` instead of middleware,
 async params/cookies). Read the relevant guide in `node_modules/next/dist/docs/` before

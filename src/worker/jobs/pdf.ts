@@ -3,7 +3,7 @@ import { withPage } from "@/lib/browser";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { log } from "@/lib/log";
-import { inlineForPrint, type Fetchers } from "@/lib/print-html";
+import { inlineForPrint, INTERNAL_TOKEN_HEADER, type Fetchers } from "@/lib/print-html";
 import type { PdfJobData } from "@/lib/queue";
 import { loadScan, saveAsset } from "@/worker/scan-context";
 
@@ -14,8 +14,8 @@ import { loadScan, saveAsset } from "@/worker/scan-context";
 const FETCH_TIMEOUT_MS = 20_000;
 const LETTER_COUNTRIES = new Set(["US", "CA", "MX", "PH", "CL", "CO", "VE"]);
 
-async function get(url: string): Promise<Response> {
-  const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
+async function get(url: string, headers?: Record<string, string>): Promise<Response> {
+  const res = await fetch(url, { headers, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
   if (!res.ok) throw new Error(`GET ${new URL(url).pathname} → ${res.status}`);
   return res;
 }
@@ -36,8 +36,9 @@ export async function pdfJob(job: Job<PdfJobData>): Promise<void> {
   const { INTERNAL_APP_URL, INTERNAL_TOKEN } = env();
   if (!INTERNAL_TOKEN) throw new UnrecoverableError("INTERNAL_TOKEN is not set");
 
-  const printUrl = `${INTERNAL_APP_URL}/report/${scanId}/print?token=${encodeURIComponent(INTERNAL_TOKEN)}`;
-  const html = await inlineForPrint(await fetchers.text(printUrl), INTERNAL_APP_URL, fetchers);
+  // The token goes in a header, not the URL, so request logs never see it.
+  const page = await get(`${INTERNAL_APP_URL}/report/${scanId}/print`, { [INTERNAL_TOKEN_HEADER]: INTERNAL_TOKEN });
+  const html = await inlineForPrint(await page.text(), INTERNAL_APP_URL, fetchers);
 
   const { snapshot } = await loadScan(scanId);
   const format = LETTER_COUNTRIES.has(snapshot?.countryCode ?? "") ? "Letter" : "A4";
