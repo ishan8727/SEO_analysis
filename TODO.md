@@ -7,7 +7,7 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 
 Phases 1–5 are built, committed and pushed to `main` (GitHub `ishanchaudhary-eng/TSI_Business_Analyzer`). The whole UI works
 locally (`pnpm start:app`, see `setup.md`): search → live scan → teaser → phone gate → full report → PDF. **Next: Phase 6** (hardening + deploy to
-`audit.thesalesinc.com`); refresh its brief first (see "Phase 6 — next"). The phone gate's SMS step can only be proven live after
+`audit.thesalesinc.com` on **Google Cloud**: one Compute Engine VM in asia-south1 running the compose stack; brief refreshed 2026-10-24). The phone gate's SMS step can only be proven live after
 deploy. `architecture.md` maps every service and integration.
 
 ## Status
@@ -19,7 +19,7 @@ deploy. `architecture.md` maps every service and integration.
 | 3 Audit engine | phases/phase-3.md | ✅ Done; acceptance checks passed with real keys. Committed (`38ed8cd`, `8689c98`) |
 | 4 Scoring, report, live scan page | phases/phase-4.md | ✅ Done, committed (`d303ff8`) |
 | 5 International pass, lead gate (Firebase phone auth), PDF | phases/phase-5.md | ✅ Built, verified locally, committed (`0e3054c`, follow-up `ff8af71`). Live SMS tests wait for deploy |
-| 6 Hardening, tests, deploy | phases/phase-6.md | ⬜ Next. Refresh the brief first |
+| 6 Hardening, tests, deploy (GCP VM) | phases/phase-6.md | ⬜ Next. Brief refreshed for GCP 2026-10-24 |
 
 Also committed: `architecture.md` (service map) and `setup.md` (run it on Windows) in `ff8af71`.
 
@@ -120,7 +120,9 @@ Also committed: `architecture.md` (service map) and `setup.md` (run it on Window
 
 ## Phase 6 — next
 
-Refresh `phases/phase-6.md` before building; it predates the Firebase switch:
+Hosting decided 2026-10-24 (user): **GCP only**, Railway dropped. One Compute Engine VM (`e2-medium`, asia-south1) running
+compose + Caddy for HTTPS, images from Cloud Build / Artifact Registry, secrets in Secret Manager, Postgres + Redis on the VM
+with nightly `pg_dump` to Cloud Storage. Full task list in `phases/phase-6.md`. Notes carried over:
 - e2e smoke: search → scan → teaser → **Firebase gate** (not WhatsApp/OTP). The gate can't be automated past reCAPTCHA; in CI, fake
   the token check (mock `verifyPhoneIdToken`) or use `auth.settings.appVerificationDisabledForTesting` with a test number.
 - [x] CSP + security headers (2026-10-24): `src/lib/security-headers.ts`, applied in `next.config.ts` `headers()`. Allowlist CSP
@@ -128,17 +130,19 @@ Refresh `phases/phase-6.md` before building; it predates the Firebase switch:
   Places autocomplete), report (OSM tiles), gate (reCAPTCHA, Firebase) load with zero CSP violations; prod build has no
   `unsafe-eval`; HSTS from prod builds only. Tests: `tests/security-headers.test.ts`.
 - [x] `/privacy` page (2026-10-24): operator The Sales Inc, contact grow@thesalesinc.com; linked from the landing page and the gate.
-  Keep it in step with the code (it names Google, Cloudflare, Make.com, Railway, OSM; retention 30 days / 90 days / leads kept).
+  Keep it in step with the code (it names Google, Cloudflare, Make.com, Railway, OSM; swap Railway for Google Cloud in Phase 6; retention 30 days / 90 days / leads kept).
 - [ ] **Lead webhook to Make.com** (user task, 2026-10-24): after `/api/verify/confirm` stores a verified lead, POST it to a
   webhook URL the user will provide (`LEAD_WEBHOOK_URL`, server-only). Payload: phone E.164, country, role, scanId, business
   name/website, score, report URL. Send from the worker (queued job with retries), not inline in the request; set
   `crmSyncedAt` on success. The privacy page already lists Make.com.
-- Railway: web, worker, moli services; build args `NEXT_PUBLIC_GOOGLE_BROWSER_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`,
-  `NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_PHONE_COUNTRIES`, `ONLINE_MODE`; worker `INTERNAL_APP_URL=http://web.railway.internal:3000`;
-  custom domain `audit.thesalesinc.com` (already in Firebase authorized domains and the API key's referrers); real Turnstile
-  keys are in `.env.railway` (gitignored, not loaded locally; secret verified with siteverify 2026-10-23). Widget mode Managed;
+- GCP VM: build args `NEXT_PUBLIC_GOOGLE_BROWSER_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_FIREBASE_*`,
+  `NEXT_PUBLIC_PHONE_COUNTRIES`, `ONLINE_MODE` go to Cloud Build; `INTERNAL_APP_URL=http://web:3000` and `MOLI_URL` stay as in
+  compose; custom domain `audit.thesalesinc.com` (already in Firebase authorized domains and the API key's referrers); real
+  Turnstile keys are in `.env.railway` (gitignored, not loaded locally; rename to `.env.production`, load into Secret Manager;
+  secret verified with siteverify 2026-10-23). Widget mode Managed;
   the app renders it `interaction-only`. Localhost keeps the invisible test key `1x00000000000000000000BB`.
-- Keep from the old brief: retention job, CI secret-leak check on values, autocannon load test, PostHog events, runbook, `getClientIp()`.
+- Also in the brief: retention job, CI secret-leak check on values, autocannon load test, PostHog events, runbook, `getClientIp()`
+  (prefers `X-Real-IP`, which Caddy must overwrite or clients can spoof it), metadata-server SSRF test, pino → Cloud Logging severity.
 - Optional: real 404s via `proxy.ts`; reset the gate when the reCAPTCHA challenge is closed (`expired-callback` / timeout).
 
 Live checks after deploy (Phase 5 acceptance):

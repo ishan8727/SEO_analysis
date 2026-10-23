@@ -26,8 +26,8 @@ The browser calls Google Places directly for autocomplete. Everything else goes 
 | Review sentiment | Gemini Flash-Lite via `@google/genai` (structured JSON output), pinned in `GEMINI_MODEL` | Fractions of a paisa per audit |
 | Lead gate | Firebase Phone Auth (SMS code) in the browser; server verifies the Firebase ID token with `firebase-admin`; report unlocks on the page with a PDF download | Works on web; billed per SMS by destination country (~$0.07 India, ~$0.01 US, ~$0.04 UK), first 10/day free (Blaze plan); no Meta setup |
 | Map on report | Leaflet + OpenStreetMap tiles | No Google Maps JS billing or key exposure |
-| Files (screenshots, PDFs) | `Asset` table in Postgres | A Railway volume mounts on one service only; web and worker both need the files |
-| Hosting | Railway, one project: web + worker (same image, different start commands), moli, Railway Redis + Postgres | Cheapest managed option; local dev identical via compose |
+| Files (screenshots, PDFs) | `Asset` table in Postgres | Web and worker both need the files; one `pg_dump` backs up everything |
+| Hosting | Google Cloud: one Compute Engine VM (`e2-medium`, asia-south1 Mumbai) running the compose stack (web + worker from one image, moli, Postgres, Redis) behind Caddy for HTTPS; images from Cloud Build / Artifact Registry; secrets in Secret Manager; nightly `pg_dump` to Cloud Storage | User decision 2026-10-24 (GCP only, cheapest option); production matches local compose |
 | Target market | International: any country (worldwide business search ranked near the visitor by IP; the business's country comes from Google's `addressComponents`), all local business categories via a dropdown; "Online only" mode for non-local | Decided 2026-10-23; `DEFAULT_COUNTRY` is only the phone gate's last-resort default |
 
 **Places pricing note.** Google bills each call at the highest tier of any field in its field mask. The Details mask in Phase 2 includes `websiteUri`, `nationalPhoneNumber`, `rating`, `userRatingCount`, `regularOpeningHours` (Enterprise) and `reviews`, `editorialSummary` (Enterprise + Atmosphere). The Nearby Search mask includes `rating`, `userRatingCount`, `websiteUri` (Enterprise). Free monthly caps for those tiers are lower than the Essentials/Pro caps. Check current pricing before launch and trim fields if needed.
@@ -113,8 +113,8 @@ Both are in the repo. `.env.example` lists every variable with comments; copy it
   - web: `prisma migrate deploy && next start`
   - worker: `node dist-worker/index.mjs`
 - **Moli** (`docker/moli/`): Debian slim + the Moli release binary (pinned `MOLI_VERSION`) + Caddy. There is no official Moli image and Moli has no auth of its own, so Moli listens on `127.0.0.1:9223` and Caddy on `:9222` checks `MOLI_TOKEN` (Bearer header, `?token=` or basic auth) and rewrites `/json/version` so CDP clients get a reachable WebSocket URL. `/health` needs no token. Flags: `--block-private-networks --layout`.
-- **Compose**: `docker compose up --build` runs all five services; only web is published. `docker-compose.dev.yml` additionally publishes postgres, redis and moli on `127.0.0.1` for host development. Redis runs with `maxmemory-policy noeviction` (BullMQ requirement). Memory limits are set per service on Railway, not in compose.
-- **Railway**: web and worker from the same Dockerfile with different start commands; moli from `docker/moli/Dockerfile` (private network only, `MOLI_URL=http://moli.railway.internal:9222`); Redis and Postgres as Railway plugins.
+- **Compose**: `docker compose up --build` runs all five services; only web is published. `docker-compose.dev.yml` additionally publishes postgres, redis and moli on `127.0.0.1` for host development. Redis runs with `maxmemory-policy noeviction` (BullMQ requirement). Memory limits are set in `docker-compose.prod.yml` (Docker on the VM honours them), not in the base file.
+- **Google Cloud (Phase 6)**: `docker-compose.yml` + `docker-compose.prod.yml` on one Compute Engine VM. The prod file pulls images from Artifact Registry, adds a Caddy service (the only one publishing ports, 80/443, Let's Encrypt), restart policies, memory limits and the `gcplogs` logging driver. Moli, Postgres and Redis stay on the compose network (`MOLI_URL=http://moli:9222`, `INTERNAL_APP_URL=http://web:3000`). Firewall: 80/443 public, SSH through IAP only.
 
 ## 7. Data model
 
@@ -128,7 +128,7 @@ Both are in the repo. `.env.example` lists every variable with comments; copy it
 | GET /api/scans/:id | — | `ScanTeaser` while running/locked; `ScanReport` if the request carries a valid unlock cookie for this scan | 60/min/IP |
 | GET /api/scans/:id/assets/:kind | kind ∈ screenshot_mobile, screenshot_desktop, pdf | image/PDF bytes; pdf requires the unlock cookie | 120/min/IP |
 | POST /api/verify/confirm | `{ scanId, role, idToken }` (Firebase ID token from phone sign-in) | sets httpOnly signed cookie `unlock_<scanId>`; `{ ok: true }`; 401 `VERIFY_FAILED` for a bad, stale (>5 min) or non-phone token; 403 `COUNTRY_NOT_SUPPORTED` | 20/10min/IP, 10/hour/phone |
-| GET /api/health | — | `{ db, redis, moli }` each "ok" or "down"; 503 if any is down | none (Railway health checks) |
+| GET /api/health | — | `{ db, redis, moli }` each "ok" or "down"; 503 if any is down | none (uptime checks) |
 
 All limits live in `RATE_LIMITS` in `src/lib/rate-limit.ts`. Errors: 429 `{ code: "RATE_LIMITED" }` with Retry-After, 400 `{ code: "INVALID_INPUT" }`, 403 `{ code: "CAPTCHA_FAILED" }`, 404 `{ code: "NOT_FOUND" }`, 500 `{ code: "SCAN_FAILED" }`. Owner-style copy on the client: 429 → "Woah, slow down. Try again in a few minutes."
 
@@ -200,7 +200,7 @@ One brief per phase in `phases/`: tasks, files, acceptance criteria and the prom
 | Prisma `url` in schema, client in node_modules | `prisma.config.ts` + driver adapter, client generated to `src/generated/prisma` | Prisma 7 conventions |
 | `Scan.screenshots`, `Scan.pdfPath`, `/data` volume | `Asset` table | A Railway volume can only be mounted on one service |
 | Redis `allkeys-lru` | `noeviction` | BullMQ breaks if queue keys are evicted |
-| Memory limits in compose | Set per service on Railway | Rootless Podman on WSL rejects cgroup limits; Railway ignores compose limits anyway |
+| Memory limits in compose | Set in `docker-compose.prod.yml` only | Rootless Podman on WSL rejects cgroup limits; Docker on the GCP VM honours them |
 | sha256(ip + salt), sha256(code + salt) | HMAC-SHA256 keyed with `HASH_SALT` | Same purpose, the correct primitive |
 | `CLAUDE.md` at repo root | `.claude/CLAUDE.md` | The repo root has a leftover empty `CLAUDE.md/` folder; delete it and the file can move to the root |
 | `pnpm ping` | `pnpm queue:ping` | pnpm has a built-in `ping` command that shadows the script |
@@ -214,3 +214,4 @@ One brief per phase in `phases/`: tasks, files, acceptance criteria and the prom
 | India first, `includedRegionCodes: [DEFAULT_COUNTRY]`, `regionCode` on Places calls, last-10-digit phone match, India-only ordering/booking hosts | International: worldwide search (IP-biased, no picker), country from Place Details `addressComponents`, no fixed `regionCode`, E.164 phone match via libphonenumber-js, global host lists (Phase 5 task 0) | User decision 2026-10-23: the service is for international clients |
 | CSP with per-request nonces via `proxy.ts` (Phase 6 brief) | Allowlist CSP set in `next.config.ts` `headers()`, `'unsafe-inline'` scripts, no nonces | Nonces force every page to render per request and don't work with Cache Components / Partial Prerendering (Next 16 CSP guide). Protection comes from the host allowlists, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri`/`form-action 'self'` (Phase 6, 2026-10-24) |
 | PDF: Moli opens `/report/[id]/print` | Worker fetches the print page over the private network (`INTERNAL_APP_URL`), inlines CSS and fonts, and calls Moli `setContent()` + `pdf()`; homepage screenshots left out of the PDF | Moli runs with `--block-private-networks`, and it doesn't paint raster images (Phase 5 testing) |
+| Railway (web, worker, moli, Railway Postgres + Redis) | One Compute Engine VM in asia-south1 running compose + Caddy; Cloud Build, Artifact Registry, Secret Manager, Cloud Logging, `pg_dump` to Cloud Storage | User decision 2026-10-24: host on GCP only, as one VM rather than Cloud Run (cost) |

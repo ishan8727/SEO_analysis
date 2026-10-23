@@ -14,7 +14,7 @@ flowchart LR
   end
 
   %% ---------- Our services ----------
-  subgraph APP["Our services (Docker / Railway)"]
+  subgraph APP["Our services (Docker compose; prod: one GCP VM)"]
     WEB["web<br/>Next.js 16 · next start · :3000<br/>pages + API routes"]
     WORKER["worker<br/>BullMQ · node dist-worker/index.mjs<br/>audit jobs + PDF"]
     subgraph MOLIBOX["moli container"]
@@ -82,8 +82,8 @@ flowchart LR
   MOLI -->|"renders homepage<br/>(public internet only)"| SITES
 ```
 
-Not connected yet: **CRM** (Zoho Bigin, deferred; leads wait in Postgres with `crmSyncedAt` null) and **Railway**
-(deploy target, Phase 6). **WhatsApp** was in the original plan and has been removed.
+Not connected yet: **CRM** (Zoho Bigin, deferred; leads wait in Postgres with `crmSyncedAt` null) and the **GCP VM**
+(deploy target, Phase 6: Compute Engine in asia-south1, Caddy in front of web). **WhatsApp** was in the original plan and has been removed.
 
 ## 2. Our services
 
@@ -259,6 +259,7 @@ Defaults: 2 attempts, exponential backoff; a step that gives up is marked `faile
 
 ## 11. Still to come (Phase 6)
 
-Railway deploy (web + worker from one image, moli, managed Postgres + Redis) on `audit.thesalesinc.com`; CSP and security
+Google Cloud deploy (one Compute Engine VM in asia-south1 running the compose stack behind Caddy; Cloud Build, Artifact Registry,
+Secret Manager, Cloud Logging, `pg_dump` backups to Cloud Storage) on `audit.thesalesinc.com`; CSP and security
 headers and the `/privacy` page are done (2026-10-24); the nightly `retention` job; the lead webhook to Make.com; real 404 status codes
 via `proxy.ts`; live SMS tests. CRM push later, when the user picks it up.
