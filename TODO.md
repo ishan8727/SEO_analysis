@@ -8,7 +8,7 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 | Phase | Brief | Status |
 |---|---|---|
 | 1 Setup and infrastructure | phases/phase-1.md | ✅ Done, committed (`a7051d4`) |
-| 2 Intake | phases/phase-2.md | 🟡 Code done and verified locally; **not committed** (see below) |
+| 2 Intake | phases/phase-2.md | 🟡 Code done, verified locally, committed (`b57b306`); a few checks left (see below) |
 | 3 Audit engine | phases/phase-3.md | ⬜ Not started |
 | 4 Scoring, report, live scan page | phases/phase-4.md | ⬜ Not started |
 | 5 Lead gate, WhatsApp, PDF, CRM | phases/phase-5.md | ⬜ Not started |
@@ -22,7 +22,6 @@ Build phases **one at a time, in order**. Stop after each phase and show the use
 - [ ] Manual UI check in a real browser once Google keys exist: typing shows suggestions, picking redirects to `/scan/[id]`.
 - [ ] Local-mode success path needs `GOOGLE_SERVER_KEY` + `NEXT_PUBLIC_GOOGLE_BROWSER_KEY` in `.env` (not set yet).
       Without the server key, local mode returns 500 `SCAN_FAILED` and logs "GOOGLE_SERVER_KEY is not set".
-- [ ] Ask the user before committing Phase 2.
 
 ### Phase 2 verified so far (dev server + worker on the host)
 - Online mode creates a scan, redirects target `/scan/[id]` renders, the flow finishes (`done`).
