@@ -128,3 +128,36 @@
     @apply font-sans;
   }
 }
+/* Landing page ASCII background (src/components/landing/SalesAsciiBackground.tsx). */
+@keyframes ascii-drift-arrows {
+  to { translate: 2% -2%; } /* up-right, with the arrows */
+}
+@keyframes ascii-drift-sparkle {
+  to { translate: -2% 2%; }
+}
+@keyframes ascii-pulse {
+  0%, 90%, 100% { opacity: 0.6; }
+  95% { opacity: 0.85; }
+}
+.ascii-drift-arrows { animation: ascii-drift-arrows 12s ease-in-out infinite alternate; }
+.ascii-drift-sparkle { animation: ascii-drift-sparkle 18s ease-in-out infinite alternate; }
+.ascii-pulse { animation: ascii-pulse 6s ease-in-out infinite; }
+.ascii-bg[data-paused] * { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+  .ascii-drift-arrows, .ascii-drift-sparkle, .ascii-pulse { animation: none; }
+}
+.ascii-bg-overlay {
+  background:
+    repeating-linear-gradient(to bottom, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
+    radial-gradient(ellipse 45% 40% at 50% 50%, rgb(0 0 0 / 75%), transparent),
+    radial-gradient(ellipse at center, transparent 65%, rgb(0 0 0 / 70%));
+}
+/* Phones see only the left of the art (its calm centre is off-screen): darken behind the whole column. */
+@media (max-width: 639px) {
+  .ascii-bg-overlay {
+    background:
+      repeating-linear-gradient(to bottom, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
+      radial-gradient(ellipse 85% 42% at 50% 50%, rgb(0 0 0 / 88%) 40%, transparent),
+      radial-gradient(ellipse at center, transparent 65%, rgb(0 0 0 / 70%));
+  }
+}
