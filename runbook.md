@@ -439,7 +439,9 @@ Side effects:
 - `GOOGLE_SERVER_KEY`: create a new key locked to the VM's IP (`scripts/gcp/setup.sh` step "Production server key" does this
   for a missing key), store it, redeploy, then delete the old key in APIs & Services → Credentials.
 
-**Make.com lead webhook** (off until this secret exists; leads stay in Postgres until then):
+**Make.com lead webhook** (secret created 2026-10-26; without it the feature is off and leads stay in Postgres). Sent only
+after the phone is confirmed by OTP, once per lead; payload in `src/worker/jobs/lead-webhook.ts`. Send a sample marked
+`"test": true`: `pnpm lead:test <webhook-url>`. To set or replace the URL:
 
 ```bash
 read -rsp "Make.com webhook URL: " V; echo

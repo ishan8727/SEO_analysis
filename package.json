@@ -25,6 +25,7 @@
     "scan:run": "tsx --env-file-if-exists=.env scripts/run-scan.ts",
     "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts",
     "pdf:smoke": "tsx --env-file-if-exists=.env scripts/pdf-smoke.ts",
+    "lead:test": "tsx --env-file-if-exists=.env scripts/lead-webhook-test.ts",
     "ascii:frames": "tsx scripts/make-ascii-frames.ts"
   },
   "dependencies": {

@@ -75,8 +75,7 @@ Rough cost: about $35–45/month (VM ~$25–30, disk, static IP, snapshots; logg
 19. Optional: real 404s via `proxy.ts`; reset the gate when the reCAPTCHA challenge is closed.
 
 Status 2026-10-26: tasks 3–13, 17, 18 built and committed (`35e63f6`, `dfa6b40`); the VM, edge Caddy and logging
-pipeline are live. Waiting: the first deploy (the user runs `bash scripts/deploy.sh`), the Make.com webhook URL
-(secret `seo-audit-LEAD_WEBHOOK_URL`), GitHub secrets for the CI value check, and deleting the empty `CLAUDE.md/` folder.
+pipeline are live. Waiting: the first deploy (the user runs `bash scripts/deploy.sh`), GitHub secrets for the CI value check, and deleting the empty `CLAUDE.md/` folder.
 Left to build: 14 (e2e), 15 (load test, after deploy), 16 (PostHog, needs a project key), the uptime check, 19 (optional).
 
 ## Acceptance criteria

@@ -137,8 +137,10 @@ blocked by the auto-mode classifier). Then Claude checks the live site against t
   bucket `gs://tsi-project-cd47e-seo-audit-build`) → Artifact Registry `seo-audit/{app,moli}:<sha>` → VM `deploy/vm-deploy.sh`
   (`.env` from Secret Manager, pull, up, edge reload, backup timer, health wait). Rollback: `scripts/deploy.sh <tag>`.
   No auto-deploy on push yet (CI only checks). Public build values in `.env.deploy` (gitignored, created 2026-10-26).
-- Make.com webhook built (`src/worker/jobs/lead-webhook.ts`); off until the user gives the URL → secret
-  `seo-audit-LEAD_WEBHOOK_URL` (runbook section 3).
+- Make.com webhook (`src/worker/jobs/lead-webhook.ts`): URL from the user stored as secret `seo-audit-LEAD_WEBHOOK_URL`
+  (2026-10-26), live with the first deploy. Payload: lead (phone, role + label, verifiedAt), business (name, website,
+  address, phone, Maps link, category, country), audit (score, grade, pillars, rank, top 5 fixes, report URL); no Google
+  rating/reviews/hours (30-day rule). Test event sent with `pnpm lead:test` (Firebase test number, `test: true`), Make answered 2xx.
 
 Hosting decided 2026-10-24 (user): **GCP only**, Railway dropped. One Compute Engine VM (`e2-medium`, asia-south1) running
 compose + Caddy for HTTPS (2026-10-26: shared host `tsi-apps-1` for several apps, one edge Caddy, per-app `seo-audit-*` resources), images from Cloud Build / Artifact Registry, secrets in Secret Manager, Postgres + Redis on the VM
