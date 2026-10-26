@@ -15,7 +15,7 @@ import { loadScanRow, SCAN_ID_RE, toReport } from "@/lib/scan-view";
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "Local SEO report",
+  title: "SEO report",
   robots: { index: false, follow: false },
 };
 
@@ -35,7 +35,7 @@ export default async function PrintPage({ params }: PageProps<"/report/[id]/prin
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
       <header className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">Local SEO report · {new Date().toISOString().slice(0, 10)}</p>
+        <p className="text-sm text-muted-foreground">SEO audit by TSI · {new Date().toISOString().slice(0, 10)}</p>
         <h1 className="text-2xl font-semibold tracking-tight break-words">{name}</h1>
         {(address || websiteUrl) && (
           <p className="text-sm break-words text-muted-foreground">{[address, websiteUrl].filter(Boolean).join(" · ")}</p>

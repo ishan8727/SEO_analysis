@@ -13,7 +13,7 @@ import { unlockCookieName, verifyUnlock } from "@/lib/unlock";
 export const instant = false;
 
 export const metadata: Metadata = {
-  title: "Your full local SEO report",
+  title: "Your full SEO report",
   robots: { index: false, follow: false },
 };
 
@@ -35,7 +35,7 @@ export default async function ReportPage({ params }: PageProps<"/report/[id]">) 
       <SalesAsciiBackground />
       <SalesAsciiLogo variant="compact" />
       <header className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">Full local SEO report</p>
+        <p className="text-sm text-muted-foreground">Full SEO report by TSI</p>
         <h1 className="text-2xl font-semibold tracking-tight break-words sm:text-3xl">{name}</h1>
         {(address || websiteUrl) && (
           <p className="text-sm break-words text-muted-foreground">{[address, websiteUrl].filter(Boolean).join(" · ")}</p>

@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 // retention in SPEC.md section 10, outside services in architecture.md.
 
 export const metadata: Metadata = {
-  title: "Privacy policy · Free Local SEO Audit",
+  title: "Privacy policy",
   description: "What we collect when you run an audit, why, who else sees it and how long we keep it.",
 };
 
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
         <p className="text-muted-foreground">Last updated {UPDATED}</p>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Privacy policy</h1>
         <p className="text-muted-foreground">
-          This free local SEO audit is run by The Sales Inc (
+          The TSI SEO audit is run by The Sales Inc (
           <a href="https://www.thesalesinc.com">thesalesinc.com</a>). This page explains what we collect when you
           use it, why, who else handles it and how long we keep it. Questions or requests:{" "}
           <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
@@ -138,7 +138,7 @@ export default function PrivacyPage() {
       </Section>
 
       <Link href="/" className={buttonVariants({ variant: "outline", className: "mt-2 self-start" })}>
-        <ArrowLeft aria-hidden /> Back to the free audit
+        <ArrowLeft aria-hidden /> Back to the SEO audit
       </Link>
     </main>
   );

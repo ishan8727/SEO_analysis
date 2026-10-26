@@ -13,7 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Free Local SEO Audit",
+  // Pages set a short title; the template adds the brand.
+  title: { default: "TSI - SEO audit", template: "%s · TSI - SEO audit" },
   description: "See how your business shows up on Google and what to fix first.",
 };
 

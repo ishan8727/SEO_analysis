@@ -129,6 +129,15 @@ Also committed: `architecture.md` (service map) and `setup.md` (run it on Window
 - Verified (Playwright + Edge, demo scans): no result in 11 polls of a live scan or in its HTML; pop-up opens only after the audit
   finishes; 390 px has no horizontal scroll; verified visitor gets no pop-up. Tests: `tests/scan-routes.test.ts`, `tests/scan-view.test.ts`.
 
+## Branding (2026-10-26, user request)
+- Favicon + app icons from the brand GIF frame 0 (`src/app/favicon.ico` 16/32/48, `icon.png` 192, `apple-icon.png` 180).
+- Wording: no "local SEO audit"/"free" anywhere; title template "… · TSI - SEO audit", labels "SEO audit by TSI".
+- Logo: the ASCII reveal is pre-rendered (`pnpm logo:build` films `AsciiLogoSource` on the dev-only `/dev/logo-capture`,
+  404 in production) into `public/brand/logo-{hero,compact}.webp` (play once; hero 610 KB, compact 187 KB) + stills
+  + hover stills. `SalesAsciiLogo` is now a plain `<img>` in the server HTML: shows ~150 ms after load instead of
+  ~1.5 s after the font and canvas work; glow after the reveal, hover/tap = stronger glow, lift, arrows nudge.
+  Hero is 70vw on phones (was 45vw). Check on a real iPhone after deploy (the old canvas logo was missing there).
+
 ## Phase 6 — next
 
 **Live (2026-10-26):** https://audit.thesalesinc.com, deployed `c02cf75` by the user (`bash scripts/deploy.sh`; Claude's runs of
