@@ -32,6 +32,29 @@ jobs:
       - run: pnpm build:worker
       - name: Server secrets must not reach the client bundle
         run: |
-          if grep -rIl "GOOGLE_SERVER_KEY\|GEMINI_API_KEY\|WHATSAPP_ACCESS_TOKEN\|MOLI_TOKEN" .next/static; then
+          if grep -rIlE "GOOGLE_SERVER_KEY|GEMINI_API_KEY|TURNSTILE_SECRET|COOKIE_SECRET|HASH_SALT|INTERNAL_TOKEN|MOLI_TOKEN|LEAD_WEBHOOK_URL" .next/static; then
             echo "Server-only secret name found in .next/static" && exit 1
           fi
+      # Values come from GitHub Actions secrets (runbook.md section 3); missing ones are skipped.
+      # grep -F with the values in env vars: they never appear in the log (GitHub masks secrets too).
+      - name: Secret values must not be in the repo or the client bundle
+        env:
+          V1: ${{ secrets.GOOGLE_SERVER_KEY }}
+          V2: ${{ secrets.GEMINI_API_KEY }}
+          V3: ${{ secrets.TURNSTILE_SECRET }}
+          V4: ${{ secrets.COOKIE_SECRET }}
+          V5: ${{ secrets.HASH_SALT }}
+          V6: ${{ secrets.INTERNAL_TOKEN }}
+          V7: ${{ secrets.MOLI_TOKEN }}
+          V8: ${{ secrets.LEAD_WEBHOOK_URL }}
+        run: |
+          checked=0
+          for name in V1 V2 V3 V4 V5 V6 V7 V8; do
+            value="${!name}"
+            [ -n "$value" ] || continue
+            checked=$((checked + 1))
+            if git grep -qF -- "$value" || grep -rqF -- "$value" .next/static; then
+              echo "A secret value (env $name) was found in the repo or .next/static" && exit 1
+            fi
+          done
+          echo "Checked $checked secret values"

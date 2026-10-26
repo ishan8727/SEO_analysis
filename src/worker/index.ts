@@ -1,7 +1,7 @@
 import { Worker, type Job } from "bullmq";
 import { db } from "@/lib/db";
 import { log } from "@/lib/log";
-import { JOB, SCAN_QUEUE, type JobName, type ScanJobData } from "@/lib/queue";
+import { getScanQueue, JOB, SCAN_QUEUE, type JobName, type ScanJobData } from "@/lib/queue";
 import { createQueueConnection } from "@/lib/redis";
 import { markScanFailed, setStepState } from "@/lib/scan-progress";
 import { STEPS_BY_MODE } from "@/types";
@@ -9,6 +9,7 @@ import { competitorsJob } from "@/worker/jobs/competitors";
 import { domAuditJob } from "@/worker/jobs/dom-audit";
 import { finalizeJob } from "@/worker/jobs/finalize";
 import { gbpJob } from "@/worker/jobs/gbp";
+import { leadWebhookJob } from "@/worker/jobs/lead-webhook";
 import { pdfJob } from "@/worker/jobs/pdf";
 import { pingJob } from "@/worker/jobs/ping";
 import { psiJob } from "@/worker/jobs/psi";
@@ -26,6 +27,7 @@ const handlers: Record<JobName, (job: Job<any>) => Promise<unknown>> = {
   [JOB.finalize]: finalizeJob,
   [JOB.pdf]: pdfJob,
   [JOB.retention]: retentionJob,
+  [JOB.leadWebhook]: leadWebhookJob,
 };
 
 const worker = new Worker(
@@ -40,6 +42,12 @@ const worker = new Worker(
     concurrency: Number(process.env.WORKER_CONCURRENCY ?? 4),
   },
 );
+
+// Nightly retention at 21:30 UTC (03:00 IST), after the 02:00 IST backup. Upsert: every worker
+// start keeps one schedule, never a duplicate.
+getScanQueue()
+  .upsertJobScheduler("retention-nightly", { pattern: "30 21 * * *", tz: "UTC" }, { name: JOB.retention })
+  .catch((err: Error) => log.error({ err: err.message }, "could not schedule retention"));
 
 worker.on("ready", () => log.info({ queue: SCAN_QUEUE }, "worker ready"));
 worker.on("completed", (job) => log.info({ jobId: job.id, name: job.name }, "job completed"));

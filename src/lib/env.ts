@@ -28,6 +28,9 @@ const schema = z.object({
   // How the worker reaches the web app over the private network (print page for the PDF).
   INTERNAL_APP_URL: z.url().default("http://localhost:3000"),
 
+  // Make.com webhook that receives verified leads (worker job lead-webhook). Empty = off; leads stay in Postgres.
+  LEAD_WEBHOOK_URL: z.union([z.literal(""), z.url()]).default(""),
+
   CRM_ENABLED: z
     .enum(["true", "false"])
     .default("false")

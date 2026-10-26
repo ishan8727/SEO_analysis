@@ -16,6 +16,7 @@ export const JOB = {
   finalize: "finalize",
   pdf: "pdf",
   retention: "retention",
+  leadWebhook: "lead-webhook",
 } as const;
 
 export type JobName = (typeof JOB)[keyof typeof JOB];
@@ -25,6 +26,9 @@ export interface ScanJobData {
 }
 export interface PdfJobData {
   scanId: string;
+  leadId: string;
+}
+export interface LeadJobData {
   leadId: string;
 }
 export interface PingJobData {
@@ -76,6 +80,15 @@ export async function enqueueScan(scanId: string, mode: "local" | "online"): Pro
 export async function enqueuePdf(scanId: string, leadId: string) {
   return getScanQueue().add(JOB.pdf, { scanId, leadId } satisfies PdfJobData, {
     jobId: `${scanId}-pdf-${leadId}`,
+  });
+}
+
+/** Sends a verified lead to LEAD_WEBHOOK_URL. More retries than scan steps: Make.com may be briefly down. */
+export async function enqueueLeadWebhook(leadId: string) {
+  return getScanQueue().add(JOB.leadWebhook, { leadId } satisfies LeadJobData, {
+    jobId: `lead-${leadId}`,
+    attempts: 6,
+    backoff: { type: "exponential", delay: 30_000 },
   });
 }
 

@@ -33,7 +33,7 @@ writing Next code. See AGENTS.md.
   Places Autocomplete via the Maps JS SDK with the browser key, and Firebase Phone Auth in the gate
   (src/lib/firebase-client.ts, loaded only by Gate.tsx).
 - GOOGLE_SERVER_KEY, GEMINI_API_KEY, TURNSTILE_SECRET, DATABASE_URL,
-  REDIS_URL, MOLI_TOKEN, HASH_SALT, COOKIE_SECRET, INTERNAL_TOKEN are server-only.
+  REDIS_URL, MOLI_TOKEN, HASH_SALT, COOKIE_SECRET, INTERNAL_TOKEN, LEAD_WEBHOOK_URL are server-only.
   Never prefix them NEXT_PUBLIC_. Read them through `env()` in src/lib/env.ts.
 - Every API route: zod-validate input, rate-limit (`enforceRateLimits` in src/lib/rate-limit.ts,
   limits only in RATE_LIMITS), return typed JSON errors via `apiError()` ({ error, code }).

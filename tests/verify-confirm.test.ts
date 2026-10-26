@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   findScan: vi.fn(),
   upsertLead: vi.fn(),
   enqueuePdf: vi.fn(),
+  enqueueLeadWebhook: vi.fn(),
   setCookie: vi.fn(),
 }));
 
@@ -17,7 +18,7 @@ vi.mock("@/lib/firebase-admin", async (importOriginal) => ({
   verifyPhoneIdToken: mocks.verifyPhoneIdToken,
 }));
 vi.mock("@/lib/db", () => ({ db: { scan: { findUnique: mocks.findScan }, lead: { upsert: mocks.upsertLead } } }));
-vi.mock("@/lib/queue", () => ({ enqueuePdf: mocks.enqueuePdf }));
+vi.mock("@/lib/queue", () => ({ enqueuePdf: mocks.enqueuePdf, enqueueLeadWebhook: mocks.enqueueLeadWebhook }));
 vi.mock("@/lib/rate-limit", () => ({ enforceRateLimits: vi.fn(async () => null) }));
 vi.mock("next/headers", () => ({ cookies: async () => ({ set: mocks.setCookie }) }));
 
@@ -38,6 +39,7 @@ beforeEach(() => {
   mocks.findScan.mockResolvedValue({ id: SCAN_ID });
   mocks.upsertLead.mockResolvedValue({ id: "lead_1" });
   mocks.enqueuePdf.mockResolvedValue({});
+  mocks.enqueueLeadWebhook.mockResolvedValue({});
   mocks.verifyPhoneIdToken.mockResolvedValue({ uid: "uid_1", phoneE164: "+919876543210" });
 });
 

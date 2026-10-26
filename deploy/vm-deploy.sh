@@ -10,6 +10,8 @@ APP=seo-audit
 SRC=$(cd "$(dirname "$0")" && pwd)
 DIR=/opt/apps/$APP
 SECRETS="HASH_SALT COOKIE_SECRET INTERNAL_TOKEN MOLI_TOKEN POSTGRES_PASSWORD TURNSTILE_SECRET GEMINI_API_KEY GOOGLE_SERVER_KEY"
+# Missing ones are written empty, which turns their feature off (LEAD_WEBHOOK_URL: Make.com lead webhook).
+OPTIONAL_SECRETS="LEAD_WEBHOOK_URL"
 step() { echo; echo "== VM: $*"; }
 
 [ -n "$TAG" ] || { echo "Usage: sudo bash vm-deploy.sh <image-tag>"; exit 1; }
@@ -38,6 +40,12 @@ umask 077
     esac
     echo "$NAME='$VAL'"
     if [ "$NAME" = GOOGLE_SERVER_KEY ]; then echo "PSI_API_KEY='$VAL'"; fi
+  done
+  for NAME in $OPTIONAL_SECRETS; do
+    VAL=$(gcloud secrets versions access latest --secret="$APP-$NAME" --project="$PROJECT" 2>/dev/null || true)
+    case "$VAL" in *"'"* | *$'\n'*) echo "Secret $APP-$NAME has a quote or newline" >&2; exit 1 ;; esac
+    echo "$NAME='$VAL'"
+    [ -n "$VAL" ] || echo "   ($APP-$NAME not set: that feature stays off)" >&2
   done
 } > "$DIR/.env.new"
 mv "$DIR/.env.new" "$DIR/.env"

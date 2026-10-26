@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { verifyPhoneIdToken, VerifyError } from "@/lib/firebase-admin";
 import { log } from "@/lib/log";
 import { allowedPhoneCountries, isAllowedPhoneCountry, parsePhone } from "@/lib/phone";
-import { enqueuePdf } from "@/lib/queue";
+import { enqueueLeadWebhook, enqueuePdf } from "@/lib/queue";
 import { enforceRateLimits } from "@/lib/rate-limit";
 import { SCAN_ID_RE } from "@/lib/scan-view";
 import { signUnlock, unlockCookieName, unlockCookieOptions } from "@/lib/unlock";
@@ -71,6 +71,9 @@ export async function POST(req: Request) {
   (await cookies()).set(unlockCookieName(scanId), signUnlock(scanId, lead.id), unlockCookieOptions());
   await enqueuePdf(scanId, lead.id).catch((err: Error) =>
     log.error({ scanId, err: err.message }, "pdf enqueue failed"), // the unlock still stands
+  );
+  await enqueueLeadWebhook(lead.id).catch((err: Error) =>
+    log.error({ scanId, leadId: lead.id, err: err.message }, "lead webhook enqueue failed"), // lead is saved; resend later
   );
   log.info({ scanId, leadId: lead.id, country: phone.country }, "lead verified");
   return Response.json({ ok: true });

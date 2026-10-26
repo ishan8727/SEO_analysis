@@ -211,7 +211,9 @@ gcloud compute scp "$BOOTSTRAP" $VM:vm-bootstrap.sh --zone=$ZONE --tunnel-throug
 "${SSH[@]}" --command="bash vm-bootstrap.sh $APP" </dev/null
 
 step "DNS"
-RESOLVED=$(dig +short $DOMAIN 2>/dev/null | tail -n 1 || true)
+# dig in Cloud Shell; nslookup in Git Bash on Windows (its last "Address" line is the answer)
+RESOLVED=$( (dig +short $DOMAIN 2>/dev/null || nslookup $DOMAIN 2>/dev/null | awk '/^Address/ {a = $2} END {print a}') \
+  | tail -n 1 || true)
 if [ "$RESOLVED" = "$IP" ]; then
   echo "   $DOMAIN -> $IP (ok)"
 else
