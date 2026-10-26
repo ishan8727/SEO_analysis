@@ -139,7 +139,8 @@ sudo chmod a+r /etc/apt/keyrings/docker.asc
 echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
   | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
 sudo mkdir -p /etc/docker
-echo '{ "log-driver": "gcplogs", "live-restore": true }' | sudo tee /etc/docker/daemon.json
+echo '{ "log-driver": "json-file", "log-opts": { "max-size": "10m", "max-file": "3", "labels": "com.docker.compose.project,com.docker.compose.service" }, "live-restore": true }' | sudo tee /etc/docker/daemon.json
+# The Ops Agent pipeline that ships these logs with severity: see OPS_CONFIG in scripts/gcp/vm-bootstrap.sh.
 sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 sudo usermod -aG docker $USER
 ```
@@ -232,7 +233,7 @@ docker info --format "log driver: {{.LoggingDriver}}" &&
 curl -s -m 5 -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata/v1/instance/name; echo " <- host still reaches metadata"'
 ```
 
-Expected: "Hello from Docker!", a compose version, about 2 GB swap, `log driver: gcplogs`, "metadata blocked for containers:
+Expected: "Hello from Docker!", a compose version, about 2 GB swap, `log driver: json-file`, "metadata blocked for containers:
 ok", and `tsi-apps-1 <- host still reaches metadata`.
 
 #### A9. Budget alert
@@ -313,7 +314,7 @@ Production gets its own random values, never the local ones:
 gen_secret HASH_SALT; gen_secret COOKIE_SECRET; gen_secret INTERNAL_TOKEN; gen_secret MOLI_TOKEN; gen_secret POSTGRES_PASSWORD
 ```
 
-Real values (`TURNSTILE_SECRET` is in `.env.railway`, to be renamed `.env.production`; `GEMINI_API_KEY` is the current key):
+Real values (`TURNSTILE_SECRET` is in `.env.railway`; `GEMINI_API_KEY` is the current key):
 
 ```bash
 add_secret TURNSTILE_SECRET
@@ -373,12 +374,138 @@ Expected: the last line prints `edge-caddy-1`. The app's Caddy site file (`/opt/
 3. Its prod compose: no published ports, memory limits on every service, web on the external network `edge-<app>` with
    alias `<app>-web`, nothing else on that network.
 
-## 2. Deploy, roll back (Phase 6)
+## 2. Deploy, roll back
 
-## 3. Rotate keys (Phase 6)
+Everything runs from **Git Bash in the project folder** (or Cloud Shell with the repo), signed in to gcloud as a
+project Owner. On the VM, this shortcut saves typing (paste it after `gcloud compute ssh tsi-apps-1
+--zone=asia-south1-a --tunnel-through-iap`):
 
-## 4. Back up and restore (Phase 6)
+```bash
+dc() { sudo docker compose -p seo-audit --project-directory /opt/apps/seo-audit \
+  -f /opt/apps/seo-audit/docker-compose.yml -f /opt/apps/seo-audit/docker-compose.prod.yml "$@"; }
+```
 
-## 5. Purge data, replay a failed scan (Phase 6)
+### Once: `.env.deploy`
 
-## 6. Logs, metrics, resizing the VM (Phase 6)
+The public build values the client bundle needs, in `.env.deploy` at the repo root (gitignored; not `.env.production`,
+which Next would load into every local build): `NEXT_PUBLIC_GOOGLE_BROWSER_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (the
+real one, not a `1x0000…` test key), `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`,
+`NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_PHONE_COUNTRIES`, `ONLINE_MODE`. The deploy script refuses to build if one is
+missing.
+
+### Deploy a change
+
+1. Commit it (the image is tagged with the commit; the script refuses uncommitted changes). Push to GitHub if you want CI.
+2. `bash scripts/deploy.sh`
+   - Cloud Build builds `app` and `moli` (about 10 minutes) and pushes them to Artifact Registry as `<commit>` and `latest`.
+   - The VM writes `/opt/apps/seo-audit/.env` from `deploy/seo-audit.env` + the `seo-audit-*` secrets, pulls, restarts
+     (migrations run when web starts), reloads the edge Caddy, installs the backup timer and waits for `/api/health`.
+3. Check: `curl https://audit.thesalesinc.com/api/health` → `{"db":"ok","redis":"ok","moli":"ok"}`.
+
+Settings: non-secret ones live in `deploy/seo-audit.env` (commit + deploy), build values in `.env.deploy` (deploy rebuilds),
+secrets in Secret Manager (section 3).
+
+### Roll back
+
+```bash
+gcloud artifacts docker tags list asia-south1-docker.pkg.dev/tsi-project-cd47e/seo-audit/app --sort-by=~UPDATE_TIME --limit=10
+bash scripts/deploy.sh <tag>      # no rebuild: deploys the images already built for that commit
+```
+
+Migrations only go forward. Rolling back across one leaves the newer schema in place; that's fine for additive
+migrations, otherwise restore the backup from before the deploy (section 4).
+
+### See what's running
+
+```bash
+gcloud compute ssh tsi-apps-1 --zone=asia-south1-a --tunnel-through-iap --command="sudo docker ps --format '{{.Names}}  {{.Status}}'; sudo grep IMAGE_TAG /opt/apps/seo-audit/.env"
+```
+
+## 3. Secrets and keys
+
+Secrets live only in Secret Manager as `seo-audit-<NAME>`. To change one, add a version, then redeploy the current tag
+(no rebuild):
+
+```bash
+read -rsp "New value: " V; echo; printf '%s' "$V" | gcloud secrets versions add seo-audit-<NAME> --data-file=-; unset V
+bash scripts/deploy.sh <current tag>      # current tag: "See what's running" above
+```
+
+Side effects:
+- `COOKIE_SECRET`: every unlocked visitor has to verify again.
+- `HASH_SALT`: rate-limit windows start over.
+- `POSTGRES_PASSWORD`: Postgres only reads it when the volume is created. Change it in the database first
+  (`dc exec postgres psql -U app -d seoaudit -c "ALTER USER app PASSWORD '<new>'"`), then add the version and redeploy.
+- `GOOGLE_SERVER_KEY`: create a new key locked to the VM's IP (`scripts/gcp/setup.sh` step "Production server key" does this
+  for a missing key), store it, redeploy, then delete the old key in APIs & Services → Credentials.
+
+**Make.com lead webhook** (off until this secret exists; leads stay in Postgres until then):
+
+```bash
+read -rsp "Make.com webhook URL: " V; echo
+printf '%s' "$V" | gcloud secrets create seo-audit-LEAD_WEBHOOK_URL --replication-policy=user-managed \
+  --locations=asia-south1 --labels=app=seo-audit --data-file=-; unset V
+gcloud secrets add-iam-policy-binding seo-audit-LEAD_WEBHOOK_URL --role=roles/secretmanager.secretAccessor \
+  --member=serviceAccount:tsi-apps-vm@tsi-project-cd47e.iam.gserviceaccount.com
+bash scripts/deploy.sh <current tag>
+```
+
+**CI secret-value check** (`.github/workflows/ci.yml`) reads the same values from GitHub Actions secrets. To copy them
+without printing them (needs the GitHub CLI, `gh auth login`):
+
+```bash
+for N in GOOGLE_SERVER_KEY GEMINI_API_KEY TURNSTILE_SECRET COOKIE_SECRET HASH_SALT INTERNAL_TOKEN MOLI_TOKEN; do
+  gcloud secrets versions access latest --secret=seo-audit-$N | gh secret set $N
+done
+```
+
+## 4. Back up and restore
+
+- **Nightly** at 02:00 IST: `pg_dump` (custom format) to `gs://tsi-project-cd47e-seo-audit-backups/postgres/`, kept 30 days.
+  Run one now on the VM: `sudo systemctl start seo-audit-backup && journalctl -u seo-audit-backup -n 5`.
+- **Disk snapshots**: daily at 02:30 IST, kept 7 days (Compute Engine → Snapshots).
+- List backups (from your PC; the VM itself can't read the bucket):
+  `gcloud storage ls -l gs://tsi-project-cd47e-seo-audit-backups/postgres/`
+
+**Restore** (replaces the current data):
+
+```bash
+# On your PC: fetch the dump and copy it to the VM
+gcloud storage cp gs://tsi-project-cd47e-seo-audit-backups/postgres/<file>.dump restore.dump
+gcloud compute scp restore.dump tsi-apps-1:restore.dump --zone=asia-south1-a --tunnel-through-iap
+# On the VM (with dc() from section 2)
+dc stop web worker
+dc exec -T postgres pg_restore -U app -d seoaudit --clean --if-exists --no-owner < restore.dump
+dc start web worker && rm restore.dump
+```
+
+Into a fresh VM: run `scripts/gcp/setup.sh`, deploy once (creates an empty database), then restore as above.
+
+## 5. Purge data, retry a failed scan
+
+On the VM: `dc exec postgres psql -U app -d seoaudit`, then:
+
+```sql
+-- One business and everything about it (screenshots and PDFs go with their scans)
+SELECT id, name, "websiteUrl" FROM "Business" WHERE name ILIKE '%<name>%';
+BEGIN;
+DELETE FROM "Lead" WHERE "scanId" IN (SELECT id FROM "Scan" WHERE "businessId" = '<id>');
+DELETE FROM "Scan" WHERE "businessId" = '<id>';
+DELETE FROM "Business" WHERE id = '<id>';
+COMMIT;
+-- One person's leads
+DELETE FROM "Lead" WHERE "phoneE164" = '+<country code><number>';
+```
+
+A failed scan isn't reused: searching for the same business again starts a fresh scan. Google data in `placeSnapshot`
+and screenshots are cleared by the nightly retention job (21:30 UTC) without help.
+
+## 6. Logs, metrics, resizing
+
+- **Logs Explorer** (console → Logging), app logs carry `severity`:
+  `logName="projects/tsi-project-cd47e/logs/docker" jsonPayload.service="worker" severity>=WARNING`
+  From your PC: `gcloud logging read 'logName="projects/tsi-project-cd47e/logs/docker" AND severity>=ERROR' --freshness=1d --limit=20`
+- **Live on the VM**: `dc logs -f --tail=100 web worker`; memory per container: `sudo docker stats --no-stream`.
+- **Metrics**: Compute Engine → `tsi-apps-1` → Observability (CPU, memory and disk come from the Ops Agent).
+- **Uptime check** on `https://audit.thesalesinc.com/api/health` with an email alert: Monitoring → Uptime checks.
+- **Resize**: section A10. Memory limits per service are in `docker-compose.prod.yml` (about 2.4 GB in total for seo-audit).

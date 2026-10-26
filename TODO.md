@@ -19,7 +19,7 @@ deploy. `architecture.md` maps every service and integration.
 | 3 Audit engine | phases/phase-3.md | ✅ Done; acceptance checks passed with real keys. Committed (`38ed8cd`, `8689c98`) |
 | 4 Scoring, report, live scan page | phases/phase-4.md | ✅ Done, committed (`d303ff8`) |
 | 5 International pass, lead gate (Firebase phone auth), PDF | phases/phase-5.md | ✅ Built, verified locally, committed (`0e3054c`, follow-up `ff8af71`). Live SMS tests wait for deploy |
-| 6 Hardening, tests, deploy (GCP VM) | phases/phase-6.md | ⬜ Next. Brief refreshed for GCP 2026-10-24 |
+| 6 Hardening, tests, deploy (GCP VM) | phases/phase-6.md | 🟡 In progress: deploy pipeline, retention, lead webhook, CI built (`35e63f6`, `dfa6b40`); first deploy waits on the user |
 
 Also committed: `architecture.md` (service map) and `setup.md` (run it on Windows) in `ff8af71`.
 
@@ -131,14 +131,22 @@ Also committed: `architecture.md` (service map) and `setup.md` (run it on Window
 
 ## Phase 6 — next
 
+**Next step (user):** `bash scripts/deploy.sh` from Git Bash in the project folder (Claude's run of the production deploy is
+blocked by the auto-mode classifier). Then Claude checks the live site against the acceptance criteria.
+- Deploy pipeline (2026-10-26): commit → `scripts/deploy.sh` → Cloud Build (`cloudbuild.yaml`, SA `seo-audit-build`, source
+  bucket `gs://tsi-project-cd47e-seo-audit-build`) → Artifact Registry `seo-audit/{app,moli}:<sha>` → VM `deploy/vm-deploy.sh`
+  (`.env` from Secret Manager, pull, up, edge reload, backup timer, health wait). Rollback: `scripts/deploy.sh <tag>`.
+  No auto-deploy on push yet (CI only checks). Public build values in `.env.deploy` (gitignored, created 2026-10-26).
+- Make.com webhook built (`src/worker/jobs/lead-webhook.ts`); off until the user gives the URL → secret
+  `seo-audit-LEAD_WEBHOOK_URL` (runbook section 3).
+
 Hosting decided 2026-10-24 (user): **GCP only**, Railway dropped. One Compute Engine VM (`e2-medium`, asia-south1) running
 compose + Caddy for HTTPS (2026-10-26: shared host `tsi-apps-1` for several apps, one edge Caddy, per-app `seo-audit-*` resources), images from Cloud Build / Artifact Registry, secrets in Secret Manager, Postgres + Redis on the VM
 with nightly `pg_dump` to Cloud Storage, in project `tsi-project-cd47e` (confirmed 2026-10-24). Full task list in `phases/phase-6.md`.
 - [ ] **User:** one-time GCP setup, `runbook.md` section 1: Part A shared host (VM, firewall, edge Caddy), Part B for `seo-audit`
   (registry, bucket, secrets, key, DNS). 2026-10-26: `scripts/gcp/setup.sh` run, all checks green (VM `tsi-apps-1`
-  34.14.137.215, Docker + compose 5.6.1, gcplogs, metadata blocked for containers, edge Caddy on `edge-seo-audit`).
-  Left for the user: secrets `seo-audit-TURNSTILE_SECRET` and `seo-audit-GEMINI_API_KEY` (rerun `bash scripts/gcp/setup.sh`
-  in a terminal), DNS A record `audit` → 34.14.137.215 (DNS only), budget alert. Phase 6 code waits on it
+  34.14.137.215, Docker + compose 5.6.1, json-file logs → Ops Agent, metadata blocked for containers, edge Caddy on `edge-seo-audit`).
+  User then added the two real secrets and the DNS A record `audit` → 34.14.137.215 (verified: 8 secrets, DNS resolves). Phase 6 code waits on it
   only for the live deploy.
 
 Notes carried over:
@@ -157,7 +165,7 @@ Notes carried over:
 - GCP VM: build args `NEXT_PUBLIC_GOOGLE_BROWSER_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_FIREBASE_*`,
   `NEXT_PUBLIC_PHONE_COUNTRIES`, `ONLINE_MODE` go to Cloud Build; `INTERNAL_APP_URL=http://web:3000` and `MOLI_URL` stay as in
   compose; custom domain `audit.thesalesinc.com` (already in Firebase authorized domains and the API key's referrers); real
-  Turnstile keys are in `.env.railway` (gitignored, not loaded locally; rename to `.env.production`, load into Secret Manager;
+  Turnstile keys are in `.env.railway` (gitignored, not loaded locally; the site key is copied to `.env.deploy`, the secret is in Secret Manager;
   secret verified with siteverify 2026-10-23). Widget mode Managed;
   the app renders it `interaction-only`. Localhost keeps the invisible test key `1x00000000000000000000BB`.
 - Also in the brief: retention job, CI secret-leak check on values, autocannon load test, PostHog events, runbook, `getClientIp()`
