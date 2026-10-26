@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+import { SalesAsciiBackground } from "@/components/landing/SalesAsciiBackground";
+import { SalesAsciiLogo } from "@/components/landing/SalesAsciiLogo";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 // Privacy policy (linked from the phone gate's consent line and the landing page).
 // Keep it in step with what the code actually does: data model in prisma/schema.prisma,
@@ -11,21 +16,27 @@ export const metadata: Metadata = {
 };
 
 const CONTACT = "grow@thesalesinc.com";
-const UPDATED = "24 October 2026";
+const UPDATED = "25 October 2026";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="flex flex-col gap-2">
-      <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-      {children}
-    </section>
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">{children}</CardContent>
+    </Card>
   );
 }
 
 export default function PrivacyPage() {
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-8 px-4 py-10 text-sm leading-6 sm:py-16 [&_a]:underline [&_a]:underline-offset-2 [&_li]:ml-5 [&_li]:list-disc">
-      <header className="flex flex-col gap-1">
+    // Dark brand theme over the ASCII background with the compact logo (links home), like the scan and
+    // report pages. Text sits in the translucent cards so it stays readable over the background.
+    <main className="dark brand-theme mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 pt-28 pb-10 text-sm leading-6 text-foreground sm:pb-16 md:pt-36 [&_:is(p,li)_a]:underline [&_:is(p,li)_a]:underline-offset-2 [&_:is(p,li)_a:hover]:text-primary [&_li]:ml-5 [&_li]:list-disc [&_li]:marker:text-primary">
+      <SalesAsciiBackground />
+      <SalesAsciiLogo variant="compact" />
+      <header className="mb-2 flex flex-col gap-1">
         <p className="text-muted-foreground">Last updated {UPDATED}</p>
         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Privacy policy</h1>
         <p className="text-muted-foreground">
@@ -85,7 +96,7 @@ export default function PrivacyPage() {
             <strong>Make.com</strong>: passes your verified number and report details to our team&apos;s tools.
           </li>
           <li>
-            <strong>Railway</strong>: hosts the app and its database.
+            <strong>Google Cloud</strong>: hosts the app and its database (Compute Engine, Mumbai region).
           </li>
           <li>
             <strong>OpenStreetMap</strong>: your browser loads the map images in the report from OpenStreetMap&apos;s
@@ -126,9 +137,9 @@ export default function PrivacyPage() {
         <p>If we change how we use your data, we&apos;ll update this page and the date at the top.</p>
       </Section>
 
-      <p>
-        <Link href="/">Back to the free audit</Link>
-      </p>
+      <Link href="/" className={buttonVariants({ variant: "outline", className: "mt-2 self-start" })}>
+        <ArrowLeft aria-hidden /> Back to the free audit
+      </Link>
     </main>
   );
 }
