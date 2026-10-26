@@ -8,6 +8,9 @@ import { useMediaQuery } from "@/components/landing/media-hooks";
 // The Sales Inc. logo: the ASCII reveal pre-rendered as an animated WebP (scripts/make-logo-animation.ts films
 // AsciiLogoSource.tsx; files in public/brand/). It's a plain image in the server HTML, so it shows on every
 // device without waiting for JavaScript, fonts or canvas work. It plays once and stops on the full logo.
+// The files are drawn at laptop size (1x: hero 448 px, compact 180 px), where the ASCII glyphs look clean, and
+// scaled up with image-rendering: pixelated so they stay crisp. Widths are picked so phones scale by whole numbers
+// (hero 299 px and compact 120 px are exactly 2x on a 3x screen; 448/180 px are 1x or 2x on laptops).
 // Once played: a red glow, and on hover (or tap) the arrows nudge up-right, the glow brightens and the
 // logo lifts a little. Reduced motion: the still, no reveal.
 //   hero:    the landing page's big logo, in the page flow.
@@ -15,8 +18,8 @@ import { useMediaQuery } from "@/components/landing/media-hooks";
 
 const VARIANTS = {
   // revealMs: the animation's length (VARIANTS in scripts/make-logo-animation.ts).
-  hero: { src: "/brand/logo-hero", width: 896, height: 448, revealMs: 1800 },
-  compact: { src: "/brand/logo-compact", width: 360, height: 180, revealMs: 1000 },
+  hero: { src: "/brand/logo-hero", width: 448, height: 224, revealMs: 1800 },
+  compact: { src: "/brand/logo-compact", width: 180, height: 90, revealMs: 1000 },
 } as const;
 
 const GLOW = "[filter:drop-shadow(0_0_4px_rgb(251_43_47/0.5))]";
@@ -59,7 +62,7 @@ export function SalesAsciiLogo({ variant = "hero" }: { variant?: keyof typeof VA
           loading="eager"
           decoding="async"
           onLoad={() => setLoaded(true)}
-          className="block h-auto w-full"
+          className="block h-auto w-full [image-rendering:pixelated]"
         />
       </picture>
       {played && (
@@ -71,7 +74,7 @@ export function SalesAsciiLogo({ variant = "hero" }: { variant?: keyof typeof VA
           height={v.height}
           alt=""
           aria-hidden
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-active:opacity-100"
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-0 [image-rendering:pixelated] transition-opacity duration-200 group-hover:opacity-100 group-active:opacity-100"
         />
       )}
     </span>
@@ -82,7 +85,7 @@ export function SalesAsciiLogo({ variant = "hero" }: { variant?: keyof typeof VA
       <Link
         href="/"
         aria-label="The Sales Inc. – Home"
-        className="group fixed top-5 left-6 z-50 block w-[130px] md:top-6 md:left-8 md:w-[180px]"
+        className="group fixed top-5 left-6 z-50 block w-[120px] md:top-6 md:left-8 md:w-[180px]"
       >
         {logo}
       </Link>
@@ -91,7 +94,7 @@ export function SalesAsciiLogo({ variant = "hero" }: { variant?: keyof typeof VA
 
   return (
     <div
-      className="group w-[70vw] max-w-md shrink-0 self-start sm:w-[45vw]"
+      className="group w-[299px] max-w-[80vw] shrink-0 self-start sm:w-[45vw] sm:max-w-md"
       // Pulled left by the artwork's margin so the frame lines up with the heading below.
       style={{ translate: `-${(FRAME_LEFT * 100).toFixed(2)}% 0` }}
     >

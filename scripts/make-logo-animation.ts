@@ -14,7 +14,10 @@ import { chromium, type Page } from "playwright-core";
 const BASE = process.argv[2] ?? "http://localhost:3000";
 const OUT = "public/brand";
 const FRAME_MS = 33; // ~30 fps
-const SCALE = 2; // crisp on retina screens: hero 896×448, compact 360×180
+// 1 = drawn exactly as a laptop shows the live logo (hero 448×224, compact 180×90): there the ~3 px glyphs blend
+// into clean blocks. At 2x+ the glyphs' own shading texture shows and looks broken once scaled. The site scales
+// these up with image-rendering: pixelated, so they stay crisp on phones and retina screens.
+const SCALE = Number(process.env.LOGO_SCALE ?? 1);
 // Reveal length per variant: redAt + redS from SOURCE_VARIANTS in AsciiLogoSource.tsx.
 const VARIANTS = { hero: 1800, compact: 1000 } as const;
 
