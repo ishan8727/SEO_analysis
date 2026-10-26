@@ -1,0 +1,57 @@
+# Production on the shared GCP VM (tsi-apps-1), on top of docker-compose.yml:
+#   docker compose -p seo-audit -f docker-compose.yml -f docker-compose.prod.yml up -d
+# scripts/deploy.sh copies both files to /opt/apps/seo-audit and writes its .env (config + Secret Manager values,
+# REGISTRY, IMAGE_TAG). Images come from Artifact Registry; nothing is built on the VM.
+# No published ports: the shared edge Caddy reaches web over the private network edge-seo-audit.
+name: seo-audit
+
+services:
+  web:
+    image: ${REGISTRY:?}/app:${IMAGE_TAG:?}
+    build: !reset null
+    ports: !reset []
+    restart: unless-stopped
+    mem_limit: 768m
+    environment:
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:?}@postgres:5432/seoaudit
+    networks:
+      default: {}
+      edge:
+        aliases: [seo-audit-web]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+
+  worker:
+    image: ${REGISTRY:?}/app:${IMAGE_TAG:?}
+    build: !reset null
+    restart: unless-stopped
+    mem_limit: 512m
+    environment:
+      DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:?}@postgres:5432/seoaudit
+
+  moli:
+    image: ${REGISTRY:?}/moli:${IMAGE_TAG:?}
+    build: !reset null
+    restart: unless-stopped
+    mem_limit: 384m
+
+  redis:
+    # AOF on, so queued jobs survive a restart.
+    command: ["redis-server", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction", "--appendonly", "yes"]
+    restart: unless-stopped
+    mem_limit: 192m
+
+  postgres:
+    # The password only takes effect when the volume is first created; to change it later see runbook.md section 3.
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+    restart: unless-stopped
+    mem_limit: 512m
+
+networks:
+  edge:
+    name: edge-seo-audit
+    external: true

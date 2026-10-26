@@ -15,7 +15,7 @@ RUN pnpm install --prod --frozen-lockfile
 
 FROM base AS build
 # Inlined into the static landing page / client bundle at build time.
-# Railway passes service variables with these names as build args.
+# Cloud Build passes them from .env.deploy (cloudbuild.yaml, scripts/deploy.sh).
 ARG NEXT_PUBLIC_GOOGLE_BROWSER_KEY=""
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=""
 ARG NEXT_PUBLIC_FIREBASE_API_KEY=""

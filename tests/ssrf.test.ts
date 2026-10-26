@@ -45,7 +45,11 @@ describe("parsePublicUrl", () => {
     ["http://localhost:80", "BLOCKED_HOST"],
     ["https://maps.google.com/x", "BLOCKED_HOST"],
     ["https://www.facebook.com/page", "BLOCKED_HOST"],
-    ["http://moli.railway.internal", "BLOCKED_HOST"],
+    // GCE metadata server: hands out the VM's service-account token
+    ["http://metadata.google.internal/computeMetadata/v1/", "BLOCKED_HOST"],
+    ["http://metadata.google.internal./", "BLOCKED_HOST"],
+    ["http://169.254.169.254/computeMetadata/v1/", "BLOCKED_HOST"],
+    ["http://[fd20:ce::254]/", "BLOCKED_HOST"],
     ["http://intranet/", "BLOCKED_HOST"],
   ])("rejects %s (%s)", (raw, reason) => {
     try {
@@ -65,6 +69,12 @@ describe("parsePublicUrl", () => {
 describe("assertPublicUrl", () => {
   it("rejects a hostname that resolves to a private address (DNS rebinding style)", async () => {
     await expect(assertPublicUrl("https://evil.example", fakeLookup(["93.184.215.14", "10.0.0.5"]))).rejects.toMatchObject({
+      reason: "PRIVATE_ADDRESS",
+    });
+  });
+
+  it("rejects a hostname that resolves to the metadata server", async () => {
+    await expect(assertPublicUrl("https://meta.example", fakeLookup(["169.254.169.254"]))).rejects.toMatchObject({
       reason: "PRIVATE_ADDRESS",
     });
   });

@@ -1,7 +1,8 @@
 # Full stack: docker compose up --build
 # Only web is published to the host. Moli, Redis and Postgres stay on the compose network.
 # For running Next/worker on the host instead, add docker-compose.dev.yml (see CLAUDE.md).
-# Memory limits are set per service on Railway (Phase 6), not here: rootless Podman on WSL rejects them.
+# Production (shared GCP VM) adds docker-compose.prod.yml: registry images, memory limits, no published ports.
+# Memory limits live only there: rootless Podman on WSL rejects them.
 
 x-app: &app
   image: local-seo-audit:local

@@ -1,0 +1,47 @@
+# Builds the app and Moli images and pushes them to Artifact Registry. scripts/deploy.sh runs it with
+# the commit SHA as _TAG and the public build values from .env.deploy (inlined into the client bundle).
+steps:
+  - id: app
+    name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --tag=${_REGISTRY}/app:${_TAG}
+      - --tag=${_REGISTRY}/app:latest
+      - --build-arg=NEXT_PUBLIC_GOOGLE_BROWSER_KEY=${_NEXT_PUBLIC_GOOGLE_BROWSER_KEY}
+      - --build-arg=NEXT_PUBLIC_TURNSTILE_SITE_KEY=${_NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_API_KEY=${_NEXT_PUBLIC_FIREBASE_API_KEY}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=${_NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN}
+      - --build-arg=NEXT_PUBLIC_FIREBASE_PROJECT_ID=${_NEXT_PUBLIC_FIREBASE_PROJECT_ID}
+      - --build-arg=NEXT_PUBLIC_PHONE_COUNTRIES=${_NEXT_PUBLIC_PHONE_COUNTRIES}
+      - --build-arg=ONLINE_MODE=${_ONLINE_MODE}
+      - .
+  - id: moli
+    name: gcr.io/cloud-builders/docker
+    waitFor: ["-"]
+    args:
+      - build
+      - --tag=${_REGISTRY}/moli:${_TAG}
+      - --tag=${_REGISTRY}/moli:latest
+      - docker/moli
+
+images:
+  - ${_REGISTRY}/app:${_TAG}
+  - ${_REGISTRY}/app:latest
+  - ${_REGISTRY}/moli:${_TAG}
+  - ${_REGISTRY}/moli:latest
+
+substitutions:
+  _REGISTRY: ""
+  _TAG: ""
+  _NEXT_PUBLIC_GOOGLE_BROWSER_KEY: ""
+  _NEXT_PUBLIC_TURNSTILE_SITE_KEY: ""
+  _NEXT_PUBLIC_FIREBASE_API_KEY: ""
+  _NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ""
+  _NEXT_PUBLIC_FIREBASE_PROJECT_ID: ""
+  _NEXT_PUBLIC_PHONE_COUNTRIES: ""
+  _ONLINE_MODE: "on"
+
+options:
+  # Required with a user-managed build service account (seo-audit-build).
+  logging: CLOUD_LOGGING_ONLY
+timeout: 1800s

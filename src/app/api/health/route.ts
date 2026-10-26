@@ -3,7 +3,7 @@ import { moliStatus } from "@/lib/browser";
 import { db } from "@/lib/db";
 import { getRedis } from "@/lib/redis";
 
-// Not rate limited: Railway's health checks call it. Exposes only up/down per dependency.
+// Not rate limited: the deploy script and uptime checks call it. Exposes only up/down per dependency.
 
 async function withTimeout(check: Promise<unknown>, ms = 3_000): Promise<boolean> {
   let timer: NodeJS.Timeout | undefined;

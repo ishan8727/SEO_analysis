@@ -14,9 +14,20 @@ if [ "$(hostname)" != "tsi-apps-1" ]; then
 fi
 [ -n "$APPS" ] || { echo "Usage: bash vm-bootstrap.sh <app> [<app> ...]"; exit 1; }
 
-step "Docker Engine + compose plugin (logs go to Cloud Logging)"
+step "Docker Engine + compose plugin"
+# json-file logs (rotated) that the Ops Agent ships to Cloud Logging as structured entries (see below).
+# gcplogs isn't used: it sends each line as an unparsed string, so app severities are lost.
+DAEMON_JSON='{
+  "log-driver": "json-file",
+  "log-opts": { "max-size": "10m", "max-file": "3", "labels": "com.docker.compose.project,com.docker.compose.service" },
+  "live-restore": true
+}'
 sudo mkdir -p /etc/docker
-echo '{ "log-driver": "gcplogs", "live-restore": true }' | sudo tee /etc/docker/daemon.json >/dev/null
+DAEMON_CHANGED=no
+if [ "$(sudo cat /etc/docker/daemon.json 2>/dev/null)" != "$DAEMON_JSON" ]; then
+  echo "$DAEMON_JSON" | sudo tee /etc/docker/daemon.json >/dev/null
+  DAEMON_CHANGED=yes
+fi
 if ! command -v docker >/dev/null; then
   sudo apt-get update -qq
   sudo apt-get install -y -qq ca-certificates curl unattended-upgrades >/dev/null
@@ -30,6 +41,11 @@ if ! command -v docker >/dev/null; then
   echo "   installed"
 else
   echo "   already installed"
+  if [ "$DAEMON_CHANGED" = yes ]; then
+    # live-restore keeps containers running; they pick up the new log driver when recreated.
+    sudo systemctl restart docker
+    echo "   log settings changed: docker restarted"
+  fi
 fi
 sudo usermod -aG docker "$USER"
 
@@ -68,6 +84,34 @@ if ! dpkg -s google-cloud-ops-agent >/dev/null 2>&1; then
   echo "   installed"
 else
   echo "   already installed"
+fi
+# Container logs: Docker's json-file lines wrap each app line; parse both layers and lift the app's
+# `severity` (src/lib/log.ts) onto the entry. Lines that aren't JSON (postgres, moli) stay plain text.
+OPS_CONFIG='logging:
+  receivers:
+    docker:
+      type: files
+      include_paths: [/var/lib/docker/containers/*/*-json.log]
+  processors:
+    docker_line:
+      type: parse_json
+    app_line:
+      type: parse_json
+      field: log
+    app_severity:
+      type: modify_fields
+      fields:
+        severity:
+          move_from: jsonPayload.severity
+  service:
+    pipelines:
+      docker:
+        receivers: [docker]
+        processors: [docker_line, app_line, app_severity]'
+if [ "$(sudo cat /etc/google-cloud-ops-agent/config.yaml 2>/dev/null)" != "$OPS_CONFIG" ]; then
+  echo "$OPS_CONFIG" | sudo tee /etc/google-cloud-ops-agent/config.yaml >/dev/null
+  sudo systemctl restart google-cloud-ops-agent
+  echo "   container log pipeline configured"
 fi
 
 step "Registry login and folders"
@@ -128,13 +172,15 @@ for APP in $APPS; do
 done
 
 step "Start the edge"
+# A running Caddy keeps its old log driver until it's recreated.
+if [ "$DAEMON_CHANGED" = yes ]; then sudo docker rm -f edge-caddy-1 >/dev/null 2>&1 || true; fi
 sudo /opt/edge/up.sh
 
 step "Checks"
 sudo docker run --rm hello-world | grep "Hello from Docker"
 echo "compose: $(sudo docker compose version --short)"
 echo "swap:    $(free -h | awk '/Swap/ {print $2}')"
-echo "logs:    $(sudo docker info --format '{{.LoggingDriver}}')"
+echo "logs:    $(sudo docker info --format '{{.LoggingDriver}}') -> Ops Agent ($(systemctl is-active google-cloud-ops-agent))"
 # curl exit 7 = connection refused by our REJECT rule; anything else means the block isn't working
 set +e
 sudo docker run --rm curlimages/curl -s -m 5 http://169.254.169.254/ >/dev/null 2>&1

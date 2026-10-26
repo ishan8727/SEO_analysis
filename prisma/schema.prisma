@@ -68,8 +68,8 @@ model Scan {
   @@index([snapshotPurgeAt])
 }
 
-// Screenshots and PDFs. Stored in Postgres because a Railway volume can only be
-// mounted on one service, and both web (serves) and worker (writes) need them.
+// Screenshots and PDFs. Stored in Postgres so web (serves) and worker (writes) share them
+// and one pg_dump backs up everything.
 model Asset {
   id        String   @id @default(cuid())
   scanId    String

@@ -11,9 +11,10 @@ export function apiError(
 }
 
 /**
- * Client IP behind Railway's proxy. Prefers X-Real-IP, else the last X-Forwarded-For hop
- * (the one our proxy appended; earlier hops are client-controlled).
- * Phase 6: confirm which header Railway sets and tighten this if needed.
+ * Client IP for rate limits. In production the only way in is the edge Caddy, which overwrites
+ * X-Real-IP with the connecting address (deploy/seo-audit.caddy), so a client can't spoof it.
+ * Fallback: the last X-Forwarded-For hop (the one a proxy appended; earlier hops are client-controlled).
+ * If DNS is ever proxied through Cloudflare, use CF-Connecting-IP with Caddy trusted_proxies instead.
  */
 export function getClientIp(req: Request): string {
   const realIp = req.headers.get("x-real-ip")?.trim();

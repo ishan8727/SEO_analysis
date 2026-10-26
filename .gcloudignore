@@ -1,0 +1,9 @@
+# What `gcloud builds submit` (scripts/deploy.sh) uploads: the repo minus everything git ignores
+# (.env*, node_modules, .next, ...) and files the image doesn't need.
+#!include:.gitignore
+.git
+.github
+.claude
+phases
+target
+tests

@@ -31,8 +31,7 @@ export const DENIED_HOSTS = [
   "facebook.com",
   "localhost",
   "local",
-  "internal",
-  "railway.internal",
+  "internal", // also covers metadata.google.internal
 ];
 
 /** True only for globally routable unicast addresses (rejects private, loopback, link-local, metadata, CGNAT, NAT64...). */

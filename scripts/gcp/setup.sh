@@ -117,6 +117,28 @@ retry gcloud artifacts repositories add-iam-policy-binding $APP --location=$REGI
   --member="serviceAccount:$SA" --role=roles/artifactregistry.reader --quiet >/dev/null
 echo "   ok"
 
+step "Cloud Build for $APP: build-only service account and a source bucket (scripts/deploy.sh)"
+BUILD_SA=$APP-build@$PROJECT.iam.gserviceaccount.com
+BUILD_BUCKET=gs://$PROJECT-$APP-build
+if ! have gcloud iam service-accounts describe $BUILD_SA; then
+  gcloud iam service-accounts create $APP-build --display-name="$APP Cloud Build"
+fi
+retry gcloud projects add-iam-policy-binding $PROJECT --member="serviceAccount:$BUILD_SA" \
+  --role=roles/logging.logWriter --condition=None --quiet >/dev/null
+retry gcloud artifacts repositories add-iam-policy-binding $APP --location=$REGION \
+  --member="serviceAccount:$BUILD_SA" --role=roles/artifactregistry.writer --quiet >/dev/null
+if ! have gcloud storage buckets describe $BUILD_BUCKET; then
+  gcloud storage buckets create $BUILD_BUCKET --location=$REGION --uniform-bucket-level-access --public-access-prevention
+fi
+# Relative path: works in Cloud Shell and in Git Bash on Windows
+LIFECYCLE=lifecycle-$$.json
+echo '{"rule":[{"action":{"type":"Delete"},"condition":{"age":7}}]}' > "$LIFECYCLE"
+gcloud storage buckets update $BUILD_BUCKET --update-labels=app=$APP --lifecycle-file="$LIFECYCLE" >/dev/null
+rm -f "$LIFECYCLE"
+retry gcloud storage buckets add-iam-policy-binding $BUILD_BUCKET --member="serviceAccount:$BUILD_SA" \
+  --role=roles/storage.objectViewer >/dev/null
+echo "   ok"
+
 step "Backup bucket $BUCKET (the VM can add, not read or delete; deleted after 30 days)"
 if ! have gcloud storage buckets describe $BUCKET; then
   gcloud storage buckets create $BUCKET --location=$REGION --uniform-bucket-level-access --public-access-prevention
