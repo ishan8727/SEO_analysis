@@ -8,9 +8,9 @@ import { useMediaQuery } from "@/components/landing/media-hooks";
 // The Sales Inc. logo: the ASCII reveal pre-rendered as an animated WebP (scripts/make-logo-animation.ts films
 // AsciiLogoSource.tsx; files in public/brand/). It's a plain image in the server HTML, so it shows on every
 // device without waiting for JavaScript, fonts or canvas work. It plays once and stops on the full logo.
-// The files are drawn at laptop size (1x: hero 448 px, compact 180 px), where the ASCII glyphs look clean, and
+// The files are drawn at laptop size (1x: hero 358 px, compact 180 px), where the ASCII glyphs look clean, and
 // scaled up with image-rendering: pixelated so they stay crisp. Widths are picked so phones scale by whole numbers
-// (hero 299 px and compact 120 px are exactly 2x on a 3x screen; 448/180 px are 1x or 2x on laptops).
+// (hero 239 px and compact 120 px are exactly 2x on a 3x screen; 358/180 px are 1x or 2x on laptops).
 // Once played: a red glow, and on hover (or tap) the arrows nudge up-right, the glow brightens and the
 // logo lifts a little. Reduced motion: the still, no reveal.
 //   hero:    the landing page's big logo, in the page flow.
@@ -18,7 +18,7 @@ import { useMediaQuery } from "@/components/landing/media-hooks";
 
 const VARIANTS = {
   // revealMs: the animation's length (VARIANTS in scripts/make-logo-animation.ts).
-  hero: { src: "/brand/logo-hero", width: 448, height: 224, revealMs: 1800 },
+  hero: { src: "/brand/logo-hero", width: 358, height: 179, revealMs: 1800 },
   compact: { src: "/brand/logo-compact", width: 180, height: 90, revealMs: 1000 },
 } as const;
 
@@ -94,7 +94,7 @@ export function SalesAsciiLogo({ variant = "hero" }: { variant?: keyof typeof VA
 
   return (
     <div
-      className="group w-[299px] max-w-[80vw] shrink-0 self-start sm:w-[45vw] sm:max-w-md"
+      className="group w-[239px] max-w-[64vw] shrink-0 self-start sm:w-[36vw] sm:max-w-[358px]"
       // Pulled left by the artwork's margin so the frame lines up with the heading below.
       style={{ translate: `-${(FRAME_LEFT * 100).toFixed(2)}% 0` }}
     >

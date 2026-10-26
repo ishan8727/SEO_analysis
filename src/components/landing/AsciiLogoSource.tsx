@@ -15,7 +15,7 @@ import { AsciiArt } from "@/components/ui/ascii-art";
 const RED = "#FB2B2F";
 
 export const SOURCE_VARIANTS = {
-  hero: { width: 448, resolution: 150, arrowShift: 14, delay: 0, whiteS: 1.2, redAt: 600, redS: 1.2 },
+  hero: { width: 358, resolution: 150, arrowShift: 14, delay: 0, whiteS: 1.2, redAt: 600, redS: 1.2 },
   // 96, not 48: at 48 "THE" is under one row and SALES reads as "$ALE$".
   compact: { width: 180, resolution: 96, arrowShift: 20, delay: 0, whiteS: 0.75, redAt: 250, redS: 0.75 },
 } as const;
