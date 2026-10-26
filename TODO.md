@@ -134,8 +134,9 @@ Also committed: `architecture.md` (service map) and `setup.md` (run it on Window
 **Live (2026-10-26):** https://audit.thesalesinc.com, deployed `c02cf75` by the user (`bash scripts/deploy.sh`; Claude's runs of
 the production deploy are blocked by the auto-mode classifier). First deploy `d5faf83` crash-looped: the runtime image lacked
 `src/lib/security-headers.ts`, which `next.config.ts` imports (fixed in `c02cf75`). Next: Phase 5 live checks (below), the
-acceptance checks, then tasks 14 (e2e), 15 (load test), 16 (PostHog), the uptime check. Commits are on branch
-`major-ui-changes`; `main` is still at `c50e499`.
+acceptance checks, then tasks 14 (e2e), 15 (load test), 16 (PostHog), the uptime check. Branches (2026-10-26): only `main`
+remains (user deleted the rest, locally and on GitHub). GitHub's `main` is what's live; `scripts/deploy.sh` builds only a
+clean `main` that matches `origin/main` (workflow: runbook.md section 2).
 - Deploy pipeline (2026-10-26): commit → `scripts/deploy.sh` → Cloud Build (`cloudbuild.yaml`, SA `seo-audit-build`, source
   bucket `gs://tsi-project-cd47e-seo-audit-build`) → Artifact Registry `seo-audit/{app,moli}:<sha>` → VM `deploy/vm-deploy.sh`
   (`.env` from Secret Manager, pull, up, edge reload, backup timer, health wait). Rollback: `scripts/deploy.sh <tag>`.
