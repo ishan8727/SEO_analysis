@@ -40,6 +40,8 @@ RUN apk add --no-cache openssl && addgroup -S app && adduser -S app -G app
 ENV NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
 COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/package.json /app/next.config.ts /app/prisma.config.ts ./
+# next start compiles next.config.ts at boot, so the files it imports must ship too.
+COPY --from=build /app/src/lib/security-headers.ts ./src/lib/security-headers.ts
 COPY --from=build /app/.next ./.next
 COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
