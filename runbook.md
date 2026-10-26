@@ -26,6 +26,12 @@ Run everything in **Cloud Shell** (console.cloud.google.com → project `tsi-pro
 `gcloud` and bash built in. Sign in as an Owner of the project. **Part A** is once per VM. **Part B** is once per app; do it
 now for `seo-audit` and repeat it for each new app.
 
+**Automated:** `scripts/gcp/setup.sh` runs Parts A and B for `seo-audit` in one go and `scripts/gcp/vm-bootstrap.sh` does the
+VM side (setup.sh copies it over). Put both in one folder in Cloud Shell and run `bash setup.sh`. It asks for
+TURNSTILE_SECRET and GEMINI_API_KEY first, skips anything that already exists (safe to rerun after a failure), waits
+for SSH, and ends with the DNS record to add. DNS and the budget alert stay manual. The steps below are the same thing
+by hand.
+
 ### Part A — shared host (once)
 
 #### A1. Variables

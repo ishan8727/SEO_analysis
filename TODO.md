@@ -135,7 +135,10 @@ Hosting decided 2026-10-24 (user): **GCP only**, Railway dropped. One Compute En
 compose + Caddy for HTTPS (2026-10-26: shared host `tsi-apps-1` for several apps, one edge Caddy, per-app `seo-audit-*` resources), images from Cloud Build / Artifact Registry, secrets in Secret Manager, Postgres + Redis on the VM
 with nightly `pg_dump` to Cloud Storage, in project `tsi-project-cd47e` (confirmed 2026-10-24). Full task list in `phases/phase-6.md`.
 - [ ] **User:** one-time GCP setup, `runbook.md` section 1: Part A shared host (VM, firewall, edge Caddy), Part B for `seo-audit`
-  (registry, bucket, secrets, key, DNS). Phase 6 code waits on it
+  (registry, bucket, secrets, key, DNS). 2026-10-26: `scripts/gcp/setup.sh` run, all checks green (VM `tsi-apps-1`
+  34.14.137.215, Docker + compose 5.6.1, gcplogs, metadata blocked for containers, edge Caddy on `edge-seo-audit`).
+  Left for the user: secrets `seo-audit-TURNSTILE_SECRET` and `seo-audit-GEMINI_API_KEY` (rerun `bash scripts/gcp/setup.sh`
+  in a terminal), DNS A record `audit` → 34.14.137.215 (DNS only), budget alert. Phase 6 code waits on it
   only for the live deploy.
 
 Notes carried over:
