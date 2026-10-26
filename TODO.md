@@ -178,11 +178,11 @@ Notes carried over:
 - Optional: real 404s via `proxy.ts`; reset the gate when the reCAPTCHA challenge is closed (`expired-callback` / timeout).
 
 Live checks after deploy (Phase 5 acceptance):
-- [ ] Test number `+1 650-555-0100` / `123456`: gate → code → report unlocks.
-- [ ] One real SMS to an Indian number; a wrong code shows the error copy.
+- [x] Test number `+1 650-555-0100` / `123456`: gate → code → report unlocks (user, 2026-10-26; lead reached Make.com).
+- [x] One real SMS to an Indian number; a wrong code shows the error copy (user, 2026-10-26).
 - [ ] Autocomplete finds businesses in IN, US and GB without picking a country; a full scan of a non-Indian business (e.g. a
       London dentist) finishes with competitors, a NAP phone match and a score.
-- [ ] PDF downloads on the live site.
+- [x] PDF downloads on the live site (user, 2026-10-26). reCAPTCHA challenge works in the pop-up.
 
 ## Decisions (SPEC.md section 13)
 - Countries: **international** (decided 2026-10-23), done in Phase 5 task 0: worldwide search with no country picker (Google ranks
