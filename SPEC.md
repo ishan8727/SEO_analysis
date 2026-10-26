@@ -27,7 +27,7 @@ The browser calls Google Places directly for autocomplete. Everything else goes 
 | Lead gate | Firebase Phone Auth (SMS code) in the browser; server verifies the Firebase ID token with `firebase-admin`; report unlocks on the page with a PDF download | Works on web; billed per SMS by destination country (~$0.07 India, ~$0.01 US, ~$0.04 UK), first 10/day free (Blaze plan); no Meta setup |
 | Map on report | Leaflet + OpenStreetMap tiles | No Google Maps JS billing or key exposure |
 | Files (screenshots, PDFs) | `Asset` table in Postgres | Web and worker both need the files; one `pg_dump` backs up everything |
-| Hosting | Google Cloud: one Compute Engine VM (`e2-medium`, asia-south1 Mumbai) running the compose stack (web + worker from one image, moli, Postgres, Redis) behind Caddy for HTTPS; images from Cloud Build / Artifact Registry; secrets in Secret Manager; nightly `pg_dump` to Cloud Storage | User decision 2026-10-24 (GCP only, cheapest option); production matches local compose |
+| Hosting | Google Cloud: a shared Compute Engine VM (`tsi-apps-1`, `e2-medium`, asia-south1 Mumbai) built to host several apps, running this app's compose stack (web + worker from one image, moli, Postgres, Redis) behind a shared edge Caddy for HTTPS; images from Cloud Build / Artifact Registry; secrets in Secret Manager; nightly `pg_dump` to Cloud Storage | User decision 2026-10-24 (GCP only, cheapest option); 2026-10-26: the VM hosts other apps too. Production matches local compose |
 | Target market | International: any country (worldwide business search ranked near the visitor by IP; the business's country comes from Google's `addressComponents`), all local business categories via a dropdown; "Online only" mode for non-local | Decided 2026-10-23; `DEFAULT_COUNTRY` is only the phone gate's last-resort default |
 
 **Places pricing note.** Google bills each call at the highest tier of any field in its field mask. The Details mask in Phase 2 includes `websiteUri`, `nationalPhoneNumber`, `rating`, `userRatingCount`, `regularOpeningHours` (Enterprise) and `reviews`, `editorialSummary` (Enterprise + Atmosphere). The Nearby Search mask includes `rating`, `userRatingCount`, `websiteUri` (Enterprise). Free monthly caps for those tiers are lower than the Essentials/Pro caps. Check current pricing before launch and trim fields if needed.
@@ -35,7 +35,7 @@ The browser calls Google Places directly for autocomplete. Everything else goes 
 ## 2. Stack and external services
 
 - Node 22, pnpm 12, Next.js 16.4, TypeScript strict, Prisma 7.10, BullMQ, ioredis, zod 4, playwright-core, cheerio, libphonenumber-js, firebase (client) + firebase-admin (server), pino, nanoid, `@google/genai`, leaflet/react-leaflet, shadcn/ui, undici + ipaddr.js (SSRF guard), vitest, tsup, tsx.
-- Google Cloud project: enable Maps JavaScript API, Places API (New), PageSpeed Insights API. Two keys: `NEXT_PUBLIC_GOOGLE_BROWSER_KEY` (referrer-restricted, Maps JS + Places only) and `GOOGLE_SERVER_KEY` (IP-restricted to Railway egress, Places + PSI). One billing account for Maps, Firebase and Gemini.
+- Google Cloud project: enable Maps JavaScript API, Places API (New), PageSpeed Insights API. Two keys: `NEXT_PUBLIC_GOOGLE_BROWSER_KEY` (referrer-restricted, Maps JS + Places only) and `GOOGLE_SERVER_KEY` (production key `seo-audit-server-prod` IP-restricted to the VM's static IP, Places + PSI; local dev uses its own key). One billing account for Maps, Firebase and Gemini.
 - Gemini API key (AI Studio).
 - Firebase project (Blaze plan) on the same GCP project: Phone sign-in enabled, SMS region policy = Allow list of the countries we sell to (same list as `NEXT_PUBLIC_PHONE_COUNTRIES`), production domain in Authorized domains (`audit.thesalesinc.com`; `localhost` isn't allowed for phone auth, so the gate is tested live after deploy), test phone numbers, budget alert. Web config (`apiKey`, `authDomain`, `projectId`) is public.
 - Cloudflare Turnstile site + secret key.
@@ -64,12 +64,12 @@ The browser calls Google Places directly for autocomplete. Everything else goes 
 │   ├── generated/prisma/        # prisma generate output (gitignored)
 │   ├── app/
 │   │   ├── page.tsx                        # landing + search (Phase 2)
-│   │   ├── scan/[id]/page.tsx              # live scan + teaser + gate (Phase 4/5)
+│   │   ├── scan/[id]/page.tsx              # live scan + locked wall + gate pop-up (Phase 4/5)
 │   │   ├── report/[id]/page.tsx            # full report, unlocked (Phase 4)
 │   │   ├── report/[id]/print/page.tsx      # PDF-only layout, internal token (Phase 5)
 │   │   └── api/
 │   │       ├── scans/route.ts                    # POST create (Phase 2)
-│   │       ├── scans/[id]/route.ts               # GET status + teaser/report (Phase 4)
+│   │       ├── scans/[id]/route.ts               # GET status (not verified) or report (Phase 4)
 │   │       ├── scans/[id]/assets/[kind]/route.ts # GET screenshot/PDF bytes (Phase 4)
 │   │       ├── verify/confirm/route.ts           # POST Firebase ID token → unlock cookie (Phase 5)
 │   │       └── health/route.ts                   # Phase 1
@@ -114,7 +114,7 @@ Both are in the repo. `.env.example` lists every variable with comments; copy it
   - worker: `node dist-worker/index.mjs`
 - **Moli** (`docker/moli/`): Debian slim + the Moli release binary (pinned `MOLI_VERSION`) + Caddy. There is no official Moli image and Moli has no auth of its own, so Moli listens on `127.0.0.1:9223` and Caddy on `:9222` checks `MOLI_TOKEN` (Bearer header, `?token=` or basic auth) and rewrites `/json/version` so CDP clients get a reachable WebSocket URL. `/health` needs no token. Flags: `--block-private-networks --layout`.
 - **Compose**: `docker compose up --build` runs all five services; only web is published. `docker-compose.dev.yml` additionally publishes postgres, redis and moli on `127.0.0.1` for host development. Redis runs with `maxmemory-policy noeviction` (BullMQ requirement). Memory limits are set in `docker-compose.prod.yml` (Docker on the VM honours them), not in the base file.
-- **Google Cloud (Phase 6)**: `docker-compose.yml` + `docker-compose.prod.yml` on one Compute Engine VM. The prod file pulls images from Artifact Registry, adds a Caddy service (the only one publishing ports, 80/443, Let's Encrypt), restart policies, memory limits and the `gcplogs` logging driver. Moli, Postgres and Redis stay on the compose network (`MOLI_URL=http://moli:9222`, `INTERNAL_APP_URL=http://web:3000`). Firewall: 80/443 public, SSH through IAP only.
+- **Google Cloud (Phase 6)**: `docker-compose.yml` + `docker-compose.prod.yml` on the shared VM, compose project `seo-audit` in `/opt/apps/seo-audit`. The prod file pulls images from Artifact Registry and adds restart policies and memory limits; it publishes no ports. A shared edge Caddy (`/opt/edge`, set up in `runbook.md`) is the only thing publishing ports (80/443, Let's Encrypt) and reaches web over the private network `edge-seo-audit` (alias `seo-audit-web`). Docker's default log driver on the VM is `gcplogs`; containers can't reach the metadata server. Moli, Postgres and Redis stay on the compose network (`MOLI_URL=http://moli:9222`, `INTERNAL_APP_URL=http://web:3000`). Firewall: 80/443 public, SSH through IAP only.
 
 ## 7. Data model
 
@@ -125,8 +125,8 @@ Both are in the repo. `.env.example` lists every variable with comments; copy it
 | Route | Body / params | Response | Limits |
 |---|---|---|---|
 | POST /api/scans | `{ mode: "local", placeId, turnstileToken }` or `{ mode: "online", url, turnstileToken }` | `{ scanId }` (existing id if a scan of the same business is newer than SCAN_CACHE_DAYS) | 5/min/IP, 30/day/IP, 3/day per placeId |
-| GET /api/scans/:id | — | `ScanTeaser` while running/locked; `ScanReport` if the request carries a valid unlock cookie for this scan | 60/min/IP |
-| GET /api/scans/:id/assets/:kind | kind ∈ screenshot_mobile, screenshot_desktop, pdf | image/PDF bytes; pdf requires the unlock cookie | 120/min/IP |
+| GET /api/scans/:id | — | `ScanLocked` (`verification: "not_verified"`: status and progress only, no results) unless the request carries a valid unlock cookie for this scan; then `ScanReport` (`verification: "verified"`) | 60/min/IP |
+| GET /api/scans/:id/assets/:kind | kind ∈ screenshot_mobile, screenshot_desktop, pdf | image/PDF bytes; every kind requires the unlock cookie (401 without) | 120/min/IP |
 | POST /api/verify/confirm | `{ scanId, role, idToken }` (Firebase ID token from phone sign-in) | sets httpOnly signed cookie `unlock_<scanId>`; `{ ok: true }`; 401 `VERIFY_FAILED` for a bad, stale (>5 min) or non-phone token; 403 `COUNTRY_NOT_SUPPORTED` | 20/10min/IP, 10/hour/phone |
 | GET /api/health | — | `{ db, redis, moli }` each "ok" or "down"; 503 if any is down | none (uptime checks) |
 
@@ -134,7 +134,7 @@ All limits live in `RATE_LIMITS` in `src/lib/rate-limit.ts`. Errors: 429 `{ code
 
 ## 9. Live scan UX contract
 
-The scan page polls GET /api/scans/:id every 2 s (back off to 5 s after 30 s). Progress keys and the UI step they drive: `gbp` → "Reading your Google profile", `competitors` → "Finding nearby competitors", `psi` → "Testing your website speed", `dom` → "Checking on-page SEO", `sentiment` → "Reading your reviews", `finalize` → "Calculating score". Step states: pending, running, done, failed, skipped. Teaser reveals as each finishes: score ring, pillar bars, both screenshots, "You rank #N of M nearby". Locked (blurred, pointer-events: none): competitor names, fix checklist, sentiment detail. Gate card: role select → phone input → "Send code" (Firebase SMS, invisible reCAPTCHA) → 6-digit code → report unlocks in place; "Resend code" after 60 s.
+The scan page polls GET /api/scans/:id every 2 s (back off to 5 s after 30 s). Progress keys and the UI step they drive: `gbp` → "Reading your Google profile", `competitors` → "Finding nearby competitors", `psi` → "Testing your website speed", `dom` → "Checking on-page SEO", `sentiment` → "Reading your reviews", `finalize` → "Calculating score". Step states: pending, running, done, failed, skipped. Every result sits behind phone (OTP) verification (decided 2026-10-26): until the visitor verifies, the server sends status and progress only, never the score, pillars, rank, screenshots or fixes, so a script can't read results from the API or the page HTML. When the audit is done, a visitor who isn't verified sees, in three beats: the loader finishes; the locked wall comes in card by card (placeholder cards, blurred, the ring and bars fill, "Verify to view"); then, about 1.7 s later, the gate rises in a pop-up in the brand theme; closing it leaves the wall, and any "Verify to view" reopens it. Gate: role select → phone input → "Text me a code" (Firebase SMS, invisible reCAPTCHA) → 6-digit code → the full report; "Resend code" after 60 s. A verified visitor sees the score, pillar bars, rank, screenshots and the top 5 fixes on the scan page, and everything in the report.
 
 ## 10. Security and rate limiting (mandatory, every phase)
 
@@ -166,7 +166,7 @@ The scan page polls GET /api/scans/:id every 2 s (back off to 5 s after 30 s). P
 - gbp and onPage: sum of checklist points, each item 0/1 except photos = min(1, count/10) and altText = 1 − missingAlt/totalImgs
 - total = Σ weight_i × pillar_i / 100; website missing → webTech = onPage = 0 and the fix list leads with "No website on your Google profile"
 - Online mode uses `online.weights` (webTech 50, onPage 50).
-- Fixes: each failed checklist item has `{ pointsLost, effort: 1|2|3, text }`; sort by pointsLost / effort; show top 5 (3 locked in teaser).
+- Fixes: each failed checklist item has `{ pointsLost, effort: 1|2|3, text }`; sort by pointsLost / effort; the scan page shows the top 5 to a verified visitor, the report all of them.
 
 ## 12. Build phases
 
@@ -215,3 +215,4 @@ One brief per phase in `phases/`: tasks, files, acceptance criteria and the prom
 | CSP with per-request nonces via `proxy.ts` (Phase 6 brief) | Allowlist CSP set in `next.config.ts` `headers()`, `'unsafe-inline'` scripts, no nonces | Nonces force every page to render per request and don't work with Cache Components / Partial Prerendering (Next 16 CSP guide). Protection comes from the host allowlists, `frame-ancestors 'none'`, `object-src 'none'`, `base-uri`/`form-action 'self'` (Phase 6, 2026-10-24) |
 | PDF: Moli opens `/report/[id]/print` | Worker fetches the print page over the private network (`INTERNAL_APP_URL`), inlines CSS and fonts, and calls Moli `setContent()` + `pdf()`; homepage screenshots left out of the PDF | Moli runs with `--block-private-networks`, and it doesn't paint raster images (Phase 5 testing) |
 | Railway (web, worker, moli, Railway Postgres + Redis) | One Compute Engine VM in asia-south1 running compose + Caddy; Cloud Build, Artifact Registry, Secret Manager, Cloud Logging, `pg_dump` to Cloud Storage | User decision 2026-10-24: host on GCP only, as one VM rather than Cloud Run (cost) |
+| Caddy service in this app's `docker-compose.prod.yml`, VM `seo-audit`, secrets named `HASH_SALT` etc. | Shared host `tsi-apps-1` with one edge Caddy (`/opt/edge`); this app in `/opt/apps/seo-audit` on network `edge-seo-audit`; Google resources and secrets named `seo-audit-*`, labelled `app=seo-audit` | User decision 2026-10-26: the VM must host other apps too (`runbook.md` section 1) |

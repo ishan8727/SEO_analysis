@@ -5,11 +5,12 @@ import { connection } from "next/server";
 import { Gate } from "@/components/scan/Gate";
 import { ScanLive } from "@/components/scan/ScanLive";
 import { env } from "@/lib/env";
-import { loadScanRow, toReport, toTeaser } from "@/lib/scan-view";
+import { loadScanRow, toLocked, toReport } from "@/lib/scan-view";
 import { unlockCookieName, verifyUnlock } from "@/lib/unlock";
 
 // Live scan page (SPEC.md section 9). Renders the current state on the server, then
-// ScanLive polls the API. `instant = false`: the page reads the scan before rendering anything
+// ScanLive polls the API. A visitor who hasn't verified their phone gets status only (no results in
+// the HTML or the API); the finished scan shows a locked wall with the gate in a pop-up. `instant = false`: the page reads the scan before rendering anything
 // (no Suspense of its own). The layout shell still streams first, so an unknown id renders the
 // not-found page (noindex) with HTTP 200; see TODO.md.
 export const instant = false;
@@ -27,7 +28,7 @@ export default async function ScanPage({ params }: PageProps<"/scan/[id]">) {
   // verifyUnlock reads Date.now() for expiry; that must happen at request time, not in a prerender.
   await connection();
   const unlocked = verifyUnlock((await cookies()).get(unlockCookieName(id))?.value, id) !== null;
-  const initial = unlocked ? toReport(row) : toTeaser(row);
+  const initial = unlocked ? toReport(row) : toLocked(row);
   const { name, address, websiteUrl } = initial.business;
 
   return (

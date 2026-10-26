@@ -14,7 +14,7 @@ flowchart LR
   end
 
   %% ---------- Our services ----------
-  subgraph APP["Our services (Docker compose; prod: one GCP VM)"]
+  subgraph APP["Our services (Docker compose; prod: shared GCP VM)"]
     WEB["web<br/>Next.js 16 · next start · :3000<br/>pages + API routes"]
     WORKER["worker<br/>BullMQ · node dist-worker/index.mjs<br/>audit jobs + PDF"]
     subgraph MOLIBOX["moli container"]
@@ -83,7 +83,8 @@ flowchart LR
 ```
 
 Not connected yet: **CRM** (Zoho Bigin, deferred; leads wait in Postgres with `crmSyncedAt` null) and the **GCP VM**
-(deploy target, Phase 6: Compute Engine in asia-south1, Caddy in front of web). **WhatsApp** was in the original plan and has been removed.
+(deploy target, Phase 6: shared Compute Engine VM `tsi-apps-1` in asia-south1 that also hosts other apps; a shared edge Caddy in
+front of web over the private network `edge-seo-audit`). **WhatsApp** was in the original plan and has been removed.
 
 ## 2. Our services
 
@@ -150,7 +151,7 @@ sequenceDiagram
   Q->>K: finalize → score (lib/scoring.ts)
   loop every 2 s (5 s after 30 s)
     V->>W: GET /api/scans/:id
-    W-->>V: ScanTeaser (locked parts stripped)
+    W-->>V: ScanLocked (status only) or, with the unlock cookie, ScanReport
   end
 ```
 
@@ -192,12 +193,12 @@ sequenceDiagram
 | Route | Kind | What it does | Guard |
 |---|---|---|---|
 | `/` | page (static) | Landing + business search / website input | — |
-| `/scan/[id]` | page | Live stepper, teaser, locked sections, phone gate | unlock cookie shows the unlocked state |
+| `/scan/[id]` | page | Live stepper; when done, a locked wall with the phone gate in a pop-up, or the results once verified | no results in the HTML without the unlock cookie |
 | `/report/[id]` | page | Full report + "Download PDF" | unlock cookie, else redirect to `/scan/[id]` |
 | `/report/[id]/print` | page | PDF source for the worker | `INTERNAL_TOKEN` |
 | `POST /api/scans` | API | Create or reuse a scan | Turnstile; 5/min, 30/day per IP; 3/day per place |
-| `GET /api/scans/:id` | API | Teaser or full report JSON | 60/min per IP; full report needs the cookie |
-| `GET /api/scans/:id/assets/:kind` | API | Screenshot or PDF bytes | 120/min per IP; PDF needs the cookie |
+| `GET /api/scans/:id` | API | Status-only JSON, or the full report JSON | 60/min per IP; any result needs the cookie |
+| `GET /api/scans/:id/assets/:kind` | API | Screenshot or PDF bytes | 120/min per IP; every kind needs the cookie |
 | `POST /api/verify/confirm` | API | Firebase ID token → unlock cookie + Lead + PDF job | 20/10 min per IP, 10/hour per phone |
 | `GET /api/health` | API | `{ db, redis, moli }` up/down | none (health checks) |
 
@@ -259,7 +260,7 @@ Defaults: 2 attempts, exponential backoff; a step that gives up is marked `faile
 
 ## 11. Still to come (Phase 6)
 
-Google Cloud deploy (one Compute Engine VM in asia-south1 running the compose stack behind Caddy; Cloud Build, Artifact Registry,
+Google Cloud deploy (shared Compute Engine VM `tsi-apps-1` in asia-south1 running the compose stack behind a shared edge Caddy; Cloud Build, Artifact Registry,
 Secret Manager, Cloud Logging, `pg_dump` backups to Cloud Storage) on `audit.thesalesinc.com`; CSP and security
 headers and the `/privacy` page are done (2026-10-24); the nightly `retention` job; the lead webhook to Make.com; real 404 status codes
 via `proxy.ts`; live SMS tests. CRM push later, when the user picks it up.

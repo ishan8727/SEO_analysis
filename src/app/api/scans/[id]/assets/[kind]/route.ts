@@ -8,7 +8,7 @@ import { unlockCookieName, verifyUnlock } from "@/lib/unlock";
 import { ASSET_KINDS } from "@/types";
 
 // GET /api/scans/:id/assets/:kind — screenshot or PDF bytes from the Asset table.
-// Screenshots are part of the teaser; the PDF needs the unlock cookie.
+// Every kind is a result, so every kind needs the unlock cookie (phone verified).
 
 const paramsSchema = z.object({ id: z.string().regex(SCAN_ID_RE), kind: z.enum(ASSET_KINDS) });
 
@@ -20,8 +20,8 @@ export async function GET(req: NextRequest, ctx: RouteContext<"/api/scans/[id]/a
   if (!parsed.success) return apiError(404, "NOT_FOUND", "File not found.");
   const { id, kind } = parsed.data;
 
-  if (kind === "pdf" && !verifyUnlock(req.cookies.get(unlockCookieName(id))?.value, id)) {
-    return apiError(401, "UNAUTHORIZED", "Verify your number to download the report.");
+  if (!verifyUnlock(req.cookies.get(unlockCookieName(id))?.value, id)) {
+    return apiError(401, "UNAUTHORIZED", "Verify your number to view the report.");
   }
 
   const asset = await db.asset.findUnique({

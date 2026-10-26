@@ -118,12 +118,24 @@ Also committed: `architecture.md` (service map) and `setup.md` (run it on Window
 - Follow-up `ff8af71`: the print page takes `INTERNAL_TOKEN` in the `x-internal-token` header (the URL form leaked into the dev request
   log; the token was rotated); the print page calls `connection()` before `new Date()`; `seed:demo` queues the PDF and exits.
 
+## Results behind OTP (2026-10-26, user request)
+- Every result is behind phone verification. Not verified: `GET /api/scans/:id` and the page HTML carry status + progress only
+  (`ScanLocked`, `verification: "not_verified"`); no score, pillars, rank, screenshots or fixes. Screenshots now need the unlock
+  cookie too (401 without). Verified: `ScanReport` (`verification: "verified"`). Teaser fields (`fixesPreview`, `lockedFixCount`) are gone.
+- Done scan, not verified: loader finishes → locked wall (`src/components/scan/ResultsWall.tsx`) comes in card by card, placeholder
+  ring and bars fill (globals.css `.wall-*`, off under reduced motion) → gate pop-up rises 1.7 s later (`POPUP_DELAY_MS`) in the brand
+  theme. Esc/X closes it, "Verify to view" reopens it at once. Non-modal Base UI dialog with its own backdrop, because a
+  modal one makes the reCAPTCHA challenge (injected into `<body>`) inert. Check the challenge is clickable on the live site.
+- Verified (Playwright + Edge, demo scans): no result in 11 polls of a live scan or in its HTML; pop-up opens only after the audit
+  finishes; 390 px has no horizontal scroll; verified visitor gets no pop-up. Tests: `tests/scan-routes.test.ts`, `tests/scan-view.test.ts`.
+
 ## Phase 6 — next
 
 Hosting decided 2026-10-24 (user): **GCP only**, Railway dropped. One Compute Engine VM (`e2-medium`, asia-south1) running
-compose + Caddy for HTTPS, images from Cloud Build / Artifact Registry, secrets in Secret Manager, Postgres + Redis on the VM
+compose + Caddy for HTTPS (2026-10-26: shared host `tsi-apps-1` for several apps, one edge Caddy, per-app `seo-audit-*` resources), images from Cloud Build / Artifact Registry, secrets in Secret Manager, Postgres + Redis on the VM
 with nightly `pg_dump` to Cloud Storage, in project `tsi-project-cd47e` (confirmed 2026-10-24). Full task list in `phases/phase-6.md`.
-- [ ] **User:** one-time GCP setup, `runbook.md` section 1 (VM, firewall, registry, secrets, backups, DNS). Phase 6 code waits on it
+- [ ] **User:** one-time GCP setup, `runbook.md` section 1: Part A shared host (VM, firewall, edge Caddy), Part B for `seo-audit`
+  (registry, bucket, secrets, key, DNS). Phase 6 code waits on it
   only for the live deploy.
 
 Notes carried over:
@@ -134,7 +146,7 @@ Notes carried over:
   Places autocomplete), report (OSM tiles), gate (reCAPTCHA, Firebase) load with zero CSP violations; prod build has no
   `unsafe-eval`; HSTS from prod builds only. Tests: `tests/security-headers.test.ts`.
 - [x] `/privacy` page (2026-10-24): operator The Sales Inc, contact grow@thesalesinc.com; linked from the landing page and the gate.
-  Keep it in step with the code (it names Google, Cloudflare, Make.com, Railway, OSM; swap Railway for Google Cloud in Phase 6; retention 30 days / 90 days / leads kept).
+  Keep it in step with the code (it names Google, Cloudflare, Make.com, Google Cloud, OSM; redesigned in the brand theme with the logo 2026-10-25; retention 30 days / 90 days / leads kept).
 - [ ] **Lead webhook to Make.com** (user task, 2026-10-24): after `/api/verify/confirm` stores a verified lead, POST it to a
   webhook URL the user will provide (`LEAD_WEBHOOK_URL`, server-only). Payload: phone E.164, country, role, scanId, business
   name/website, score, report URL. Send from the worker (queued job with retries), not inline in the request; set

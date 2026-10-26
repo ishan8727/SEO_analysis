@@ -9,20 +9,18 @@ import type {
   PlaceSnapshot,
   PsiResult,
   ScanProgress,
+  ScanLocked,
   ScanReport,
-  ScanTeaser,
   ScoreResult,
   SentimentResult,
 } from "@/types";
 
 // Builds the two payloads of GET /api/scans/:id from one DB row. The scan and report
 // pages call the same functions, so the API and the server render never disagree.
-// Locked data (competitor names, full fixes, sentiment detail) is only read in toReport().
+// Results (score, pillars, screenshots, fixes, competitors, sentiment) are only read in toReport(),
+// which callers use only for a verified visitor (valid unlock cookie).
 
 export const SCAN_ID_RE = /^[A-Za-z0-9_-]{21}$/;
-
-/** Fixes shown in the teaser; the next ones are locked (SPEC.md section 11: top 5, 3 locked). */
-export const TEASER_FIXES = 2;
 
 const scanSelect = {
   id: true,
@@ -72,37 +70,32 @@ export function assetUrl(scanId: string, kind: AssetKind): string {
   return `/api/scans/${scanId}/assets/${kind}`;
 }
 
-export function toTeaser(row: ScanRow): ScanTeaser {
-  const score = row.score as unknown as ScoreResult | null;
-  const kinds = new Set(row.assets.map((a) => a.kind));
-  const fixes = score?.fixes ?? [];
-  const teaser: ScanTeaser = {
+/** Not verified: status only. No result field may be added here (tests/scan-view.test.ts). */
+export function toLocked(row: ScanRow): ScanLocked {
+  return {
     id: row.id,
-    unlocked: false,
+    verification: "not_verified",
     status: row.status,
     mode: row.business.mode,
     progress: row.progress as ScanProgress,
     business: { name: row.business.name, address: row.business.address, websiteUrl: row.business.websiteUrl },
     countryCode: (row.placeSnapshot as unknown as PlaceSnapshot | null)?.countryCode ?? null,
+    error: row.status === "failed" ? row.error : null,
+  };
+}
+
+export function toReport(row: ScanRow): ScanReport {
+  const score = row.score as unknown as ScoreResult | null;
+  const kinds = new Set(row.assets.map((a) => a.kind));
+  const { lat, lng } = row.business;
+  const report: ScanReport = {
+    ...toLocked(row),
+    verification: "verified",
     score: score && { total: score.total, grade: score.grade, pillars: score.pillars, rank: score.rank },
     screenshots: {
       ...(kinds.has("screenshot_mobile") && { mobile: assetUrl(row.id, "screenshot_mobile") }),
       ...(kinds.has("screenshot_desktop") && { desktop: assetUrl(row.id, "screenshot_desktop") }),
     },
-    fixesPreview: fixes.slice(0, TEASER_FIXES),
-    lockedFixCount: Math.max(0, fixes.length - TEASER_FIXES),
-    error: row.status === "failed" ? row.error : null,
-  };
-  if (!score && row.status !== "failed") teaser.partialPillars = partialPillars(scoringInput(row));
-  return teaser;
-}
-
-export function toReport(row: ScanRow): ScanReport {
-  const score = row.score as unknown as ScoreResult | null;
-  const { lat, lng } = row.business;
-  return {
-    ...toTeaser(row),
-    unlocked: true,
     fixes: score?.fixes ?? [],
     gbp: row.gbp as unknown as GbpResult | null,
     competitors: row.competitors as unknown as CompetitorsResult | null,
@@ -110,6 +103,8 @@ export function toReport(row: ScanRow): ScanReport {
     domAudit: row.domAudit as unknown as DomAuditResult | null,
     sentiment: row.sentiment as unknown as SentimentResult | null,
     location: lat !== null && lng !== null ? { lat, lng } : null,
-    pdfUrl: row.assets.some((a) => a.kind === "pdf") ? assetUrl(row.id, "pdf") : null,
+    pdfUrl: kinds.has("pdf") ? assetUrl(row.id, "pdf") : null,
   };
+  if (!score && row.status !== "failed") report.partialPillars = partialPillars(scoringInput(row));
+  return report;
 }

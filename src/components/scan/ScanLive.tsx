@@ -10,15 +10,15 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FixList } from "./FixList";
-import { Locked, PlaceholderLines } from "./Locked";
 import { PillarBars } from "./PillarBars";
+import { ResultsWall } from "./ResultsWall";
 import { ScanProgress } from "./ScanProgress";
 import { ScoreRing } from "./ScoreRing";
 import { Screenshots } from "./Screenshots";
 import { useScanPolling, type ScanPayload } from "./useScanPolling";
 import { STEPS_BY_MODE, type ProgressStep } from "@/types";
 
-const LOCKED_PREVIEW_ROWS = 3; // SPEC.md section 11: top 5 fixes, 3 locked
+const TOP_FIXES = 5; // SPEC.md section 11: top 5 fixes on the scan page; all of them in the report
 
 // Share of the audit's steps that are over (a running step counts half), for the loader.
 function auditProgress(scan: ScanPayload): number {
@@ -30,7 +30,11 @@ function auditProgress(scan: ScanPayload): number {
   return score / steps.length;
 }
 
-/** Live scan page body: stepper, teaser that fills in as steps finish, locked sections, gate slot. */
+/**
+ * Live scan page body. Verified: stepper, then the results as they come in. Not verified: the
+ * payload has no results (ScanLocked), so the page shows progress, then a locked wall with the
+ * gate (Gate.tsx, passed in as `gate`) in a pop-up.
+ */
 export function ScanLive({ initial, gate }: { initial: ScanPayload; gate?: ReactNode }) {
   const scan = useScanPolling(initial);
   const done = scan.status === "done";
@@ -87,6 +91,19 @@ export function ScanLive({ initial, gate }: { initial: ScanPayload; gate?: React
     );
   }
 
+  // Not verified: status only until the audit is done, then the locked wall with the gate pop-up.
+  if (scan.verification === "not_verified") {
+    return (
+      <>
+        {loader}
+        {backdrop}
+        <div className="flex flex-col gap-4">
+          {done ? <ResultsWall mode={scan.mode} gate={gate} ready={loaded} /> : <ProgressCard scan={scan} />}
+        </div>
+      </>
+    );
+  }
+
   const pillars = scan.score?.pillars ?? scan.partialPillars ?? {};
   const rank = scan.score?.rank;
   const psiState = scan.progress.psi ?? (scan.mode === "online" || scan.business.websiteUrl ? "pending" : "skipped");
@@ -97,19 +114,9 @@ export function ScanLive({ initial, gate }: { initial: ScanPayload; gate?: React
       {loader}
       {backdrop}
       <div className="flex flex-col gap-4">
-        {!done && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Running your audit</CardTitle>
-              <CardDescription>This takes about a minute. You can keep this page open.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ScanProgress mode={scan.mode} progress={scan.progress} status={scan.status} />
-            </CardContent>
-          </Card>
-        )}
+        {!done && <ProgressCard scan={scan} />}
 
-        {scan.unlocked && done && (
+        {done && (
           <Link href={`/report/${scan.id}`} className={buttonVariants({ size: "lg", className: "w-full" })}>
             Open your full report <ArrowRight aria-hidden />
           </Link>
@@ -152,51 +159,28 @@ export function ScanLive({ initial, gate }: { initial: ScanPayload; gate?: React
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
               </div>
-            ) : scan.fixesPreview.length === 0 ? (
+            ) : scan.fixes.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nothing major to fix. Nice work.</p>
             ) : (
-              <>
-                <FixList fixes={scan.fixesPreview} />
-                {!scan.unlocked && scan.lockedFixCount > 0 && (
-                  <Locked label={`${scan.lockedFixCount} more fixes in the full report`}>
-                    <PlaceholderLines rows={Math.min(LOCKED_PREVIEW_ROWS, scan.lockedFixCount)} />
-                  </Locked>
-                )}
-              </>
+              <FixList fixes={scan.fixes.slice(0, TOP_FIXES)} />
             )}
           </CardContent>
         </Card>
-
-        {scan.mode === "local" && !scan.unlocked && (
-          <>
-            <Card>
-              <CardHeader>
-                <CardTitle>Nearby competitors</CardTitle>
-                <CardDescription>Who you&apos;re up against, with their ratings and reviews.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Locked label="Competitor names in the full report">
-                  <PlaceholderLines rows={4} />
-                </Locked>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>What your reviews say</CardTitle>
-                <CardDescription>What customers love and what they complain about.</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Locked label="Review insights in the full report">
-                  <PlaceholderLines rows={3} />
-                </Locked>
-              </CardContent>
-            </Card>
-          </>
-        )}
-
-        {/* Lead gate (Gate.tsx): phone verification with Firebase. */}
-        {!scan.unlocked && gate}
       </div>
     </>
+  );
+}
+
+function ProgressCard({ scan }: { scan: ScanPayload }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Running your audit</CardTitle>
+        <CardDescription>This takes about a minute. You can keep this page open.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ScanProgress mode={scan.mode} progress={scan.progress} status={scan.status} />
+      </CardContent>
+    </Card>
   );
 }

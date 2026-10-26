@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ScanReport, ScanTeaser } from "@/types";
+import type { ScanLocked, ScanReport } from "@/types";
 
 const FAST_MS = 2_000;
 const SLOW_MS = 5_000;
 const SLOW_AFTER_MS = 30_000;
 
-export type ScanPayload = ScanTeaser | ScanReport;
+export type ScanPayload = ScanLocked | ScanReport;
 
 const finished = (s: ScanPayload) => s.status === "done" || s.status === "failed";
 

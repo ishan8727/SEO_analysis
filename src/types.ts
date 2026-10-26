@@ -172,26 +172,38 @@ export type AssetKind = (typeof ASSET_KINDS)[number];
 
 /* ---------- API payloads for GET /api/scans/:id — Phase 4 builds them ---------- */
 
-export interface ScanTeaser {
+/**
+ * Phone (OTP) verification state of the visitor for one scan: "verified" once they've passed the
+ * Firebase SMS check and hold a valid unlock cookie (src/lib/unlock.ts).
+ */
+export type Verification = "verified" | "not_verified";
+
+/** Status fields every visitor gets: enough to drive the loader and stepper, no results. */
+interface ScanStatusFields {
   id: string;
-  unlocked: false;
   status: "queued" | "running" | "done" | "failed";
   mode: "local" | "online";
   progress: ScanProgress;
   business: { name: string; address: string | null; websiteUrl: string | null };
   /** ISO country of the business from Google (null in online mode or after the snapshot purge). */
   countryCode: string | null;
+  error: string | null;
+}
+
+/**
+ * Not verified: no score, pillars, screenshots or fixes at all. The results stay on the server until
+ * the visitor verifies, so nothing can be read from this payload or the page HTML.
+ */
+export interface ScanLocked extends ScanStatusFields {
+  verification: "not_verified";
+}
+
+export interface ScanReport extends ScanStatusFields {
+  verification: "verified";
   score: Pick<ScoreResult, "total" | "grade" | "pillars" | "rank"> | null;
   /** While running: pillars whose steps have all ended (src/lib/scoring.ts partialPillars). */
   partialPillars?: Partial<Record<Pillar, number>>;
   screenshots: Partial<Record<"mobile" | "desktop", string>>; // URLs
-  fixesPreview: Fix[]; // top fixes not locked (spec: 5 shown, 3 locked → 2 here)
-  lockedFixCount: number;
-  error: string | null;
-}
-
-export interface ScanReport extends Omit<ScanTeaser, "unlocked"> {
-  unlocked: true;
   fixes: Fix[];
   gbp: GbpResult | null;
   competitors: CompetitorsResult | null;

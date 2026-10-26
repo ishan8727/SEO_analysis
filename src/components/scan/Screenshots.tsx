@@ -1,12 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import type { ScanTeaser, StepState } from "@/types";
+import type { ScanReport, StepState } from "@/types";
 
 /**
  * PSI screenshots of the homepage. Skeletons while PSI runs; nothing when there is no
  * website to test. Plain <img>: the bytes come from our own asset route, already sized. Dimmed on
  * dark pages so a bright site doesn't glare; full brightness on hover.
  */
-export function Screenshots({ shots, psiState }: { shots: ScanTeaser["screenshots"]; psiState: StepState }) {
+export function Screenshots({ shots, psiState }: { shots: ScanReport["screenshots"]; psiState: StepState }) {
   const waiting = psiState === "pending" || psiState === "running";
   if (!shots.mobile && !shots.desktop && !waiting) return null;
   return (

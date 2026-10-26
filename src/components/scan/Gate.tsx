@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { allowedPhoneCountries, isAllowedPhoneCountry, parsePhone } from "@/lib/phone";
 
-// Lead gate (SPEC.md section 9): role → phone → SMS code from Firebase → POST the ID token to
-// /api/verify/confirm, which sets the unlock cookie. Follows
+// Lead gate (SPEC.md section 9), shown in a pop-up over the locked results (ResultsWall.tsx):
+// role → phone → SMS code from Firebase → POST the ID token to /api/verify/confirm, which sets the
+// unlock cookie; only then does the server send any results. Follows
 // https://firebase.google.com/docs/auth/web/phone-auth (invisible reCAPTCHA, signInWithPhoneNumber).
 
 type FirebaseClient = typeof import("@/lib/firebase-client");
@@ -166,11 +167,12 @@ export function Gate({
     // data-busy: a faint scan line sweeps the card while a code is sent or checked (globals.css).
     <Card className="gate-card relative overflow-hidden" data-busy={busy || undefined}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Lock className="size-4" aria-hidden /> Unlock your full report
+        <CardTitle className="flex items-center gap-2 pr-8">
+          <Lock className="size-4 text-primary" aria-hidden /> Verify to view your results
         </CardTitle>
         <CardDescription>
-          Competitor names, every fix, what your reviews say and a PDF. Verify your mobile number to see it.
+          Your score, every fix, nearby competitors, what your reviews say and a PDF. Verify your mobile number to
+          see them.
         </CardDescription>
       </CardHeader>
       <CardContent>

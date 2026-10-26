@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { rankTable } from "@/lib/scoring";
-import { toReport, toTeaser, type ScanRow } from "@/lib/scan-view";
+import { toLocked, toReport, type ScanRow } from "@/lib/scan-view";
 import type { CompetitorsResult, Fix, GbpResult, ScoreResult, SentimentResult } from "@/types";
 
 const competitors: CompetitorsResult = {
@@ -55,52 +55,53 @@ const row = (over: Partial<ScanRow> = {}): ScanRow =>
     ...over,
   }) as unknown as ScanRow;
 
-describe("toTeaser", () => {
-  const teaser = toTeaser(row());
-  const body = JSON.stringify(teaser);
+describe("toLocked (not verified)", () => {
+  const locked = toLocked(row());
+  const body = JSON.stringify(locked);
 
-  it("contains no locked data at all", () => {
-    for (const secret of ["Secret Rival Dental", "Hidden Smile Clinic", "UNIQUE_LOVE_TOKEN", "UNIQUE_COMPLAINT_TOKEN", "UNIQUE_SUMMARY_TOKEN", "FIX_TEXT_3", "FIX_TEXT_6"]) {
+  it("carries status only: no result of any kind", () => {
+    for (const secret of ["Secret Rival Dental", "Hidden Smile Clinic", "UNIQUE_LOVE_TOKEN", "UNIQUE_COMPLAINT_TOKEN", "UNIQUE_SUMMARY_TOKEN", "FIX_TEXT_1", "FIX_TEXT_6", "screenshot", "/assets/"]) {
       expect(body).not.toContain(secret);
     }
-    expect(Object.keys(teaser)).not.toEqual(expect.arrayContaining(["fixes"]));
-    expect(teaser).not.toHaveProperty("competitors");
-    expect(teaser).not.toHaveProperty("sentiment");
-    expect(teaser).not.toHaveProperty("pdfUrl");
+    expect(Object.keys(locked).sort()).toEqual(
+      ["business", "countryCode", "error", "id", "mode", "progress", "status", "verification"].sort(),
+    );
+    expect(locked.verification).toBe("not_verified");
   });
 
-  it("shows the score, rank, two fixes and how many are locked", () => {
-    expect(teaser.unlocked).toBe(false);
-    expect(teaser.score).toEqual({ total: 62, grade: "C", pillars: score.pillars, rank: { position: 2, of: 3 } });
-    expect(teaser.fixesPreview.map((f) => f.text)).toEqual(["FIX_TEXT_1", "FIX_TEXT_2"]);
-    expect(teaser.lockedFixCount).toBe(4);
-  });
-
-  it("links only the screenshots that exist", () => {
-    expect(teaser.screenshots).toEqual({ mobile: "/api/scans/abcdefghijklmnopqrstu/assets/screenshot_mobile" });
-  });
-
-  it("reveals finished pillars while the scan is running", () => {
-    const running = toTeaser(row({ status: "running", score: null, progress: { gbp: "done", competitors: "running" } }));
-    expect(running.score).toBeNull();
-    expect(running.partialPillars).toEqual({ gbp: 78 });
+  it("sends no pillars while the scan is running", () => {
+    const running = toLocked(row({ status: "running", score: null, progress: { gbp: "done", competitors: "running" } }));
+    expect(running).not.toHaveProperty("partialPillars");
+    expect(running.progress).toEqual({ gbp: "done", competitors: "running" });
   });
 
   it("passes the user-safe error only for failed scans", () => {
-    expect(toTeaser(row({ status: "failed", score: null, error: "We couldn't finish" })).error).toBe("We couldn't finish");
-    expect(teaser.error).toBeNull();
+    expect(toLocked(row({ status: "failed", score: null, error: "We couldn't finish" })).error).toBe("We couldn't finish");
+    expect(locked.error).toBeNull();
   });
 });
 
-describe("toReport", () => {
-  it("adds the locked data", () => {
-    const report = toReport(row());
-    expect(report.unlocked).toBe(true);
+describe("toReport (verified)", () => {
+  const report = toReport(row());
+
+  it("has the score, every fix and the locked data", () => {
+    expect(report.verification).toBe("verified");
+    expect(report.score).toEqual({ total: 62, grade: "C", pillars: score.pillars, rank: { position: 2, of: 3 } });
     expect(report.fixes).toHaveLength(6);
     expect(report.competitors?.items[0].name).toBe("Secret Rival Dental");
     expect(report.sentiment?.summary).toBe("UNIQUE_SUMMARY_TOKEN");
     expect(report.location).toEqual({ lat: 12.9, lng: 77.6 });
     expect(report.pdfUrl).toBe("/api/scans/abcdefghijklmnopqrstu/assets/pdf");
+  });
+
+  it("links only the screenshots that exist", () => {
+    expect(report.screenshots).toEqual({ mobile: "/api/scans/abcdefghijklmnopqrstu/assets/screenshot_mobile" });
+  });
+
+  it("reveals finished pillars while the scan is running", () => {
+    const running = toReport(row({ status: "running", score: null, progress: { gbp: "done", competitors: "running" } }));
+    expect(running.score).toBeNull();
+    expect(running.partialPillars).toEqual({ gbp: 78 });
   });
 });
 
