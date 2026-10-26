@@ -393,9 +393,24 @@ real one, not a `1x0000…` test key), `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUB
 `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_PHONE_COUNTRIES`, `ONLINE_MODE`. The deploy script refuses to build if one is
 missing.
 
+### Branches: GitHub's `main` is what's live
+
+Work on a branch, merge it into `main`, push, deploy from `main`. The deploy script builds only a clean `main` that matches
+GitHub's (`ALLOW_BRANCH=1 bash scripts/deploy.sh` skips that check for an urgent fix; merge it afterwards).
+
+```bash
+git checkout -b my-change            # 1. new branch for the change
+# ...edit, then commit as often as you like...
+git push -u origin my-change         # 2. backup on GitHub; CI runs the checks
+git checkout main && git pull        # 3. merge into main (or merge a pull request on GitHub, then pull)
+git merge my-change
+git push origin main
+bash scripts/deploy.sh               # 4. build main's newest commit and put it live
+```
+
 ### Deploy a change
 
-1. Commit it (the image is tagged with the commit; the script refuses uncommitted changes). Push to GitHub if you want CI.
+1. On `main`, committed and pushed (above). The image is tagged with the commit.
 2. `bash scripts/deploy.sh`
    - Cloud Build builds `app` and `moli` (about 10 minutes) and pushes them to Artifact Registry as `<commit>` and `latest`.
    - The VM writes `/opt/apps/seo-audit/.env` from `deploy/seo-audit.env` + the `seo-audit-*` secrets, pulls, restarts

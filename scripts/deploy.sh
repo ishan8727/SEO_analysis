@@ -25,6 +25,20 @@ if [ -z "$TAG" ]; then
     echo "Commit (or stash) your changes first: the image is tagged with the commit it was built from."
     exit 1
   fi
+  # What's live is always GitHub's main: build only from main, and only once it's pushed.
+  # ALLOW_BRANCH=1 skips this (e.g. an urgent fix before merging); runbook.md section 2.
+  if [ "$ALLOW_BRANCH" != 1 ]; then
+    BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    if [ "$BRANCH" != main ]; then
+      echo "You're on '$BRANCH'. Deploy from main: merge your branch into main, push, then run this on main."
+      exit 1
+    fi
+    git fetch -q origin main
+    if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+      echo "Your main isn't the same as GitHub's main. Push it (git push origin main) or pull, then deploy."
+      exit 1
+    fi
+  fi
   TAG=$(git rev-parse --short=12 HEAD)
   [ -f .env.deploy ] || { echo "Missing .env.deploy (public build values; see runbook.md section 2)."; exit 1; }
 
