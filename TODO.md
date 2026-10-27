@@ -3,6 +3,20 @@
 Read this first in a new session, then SPEC.md and the brief for the current phase in `phases/`.
 Build phases **one at a time, in order**. Stop after each phase and show the user how to verify it.
 
+## Resize to a small machine (2026-10-27, branch `reducing-the-version`)
+
+Plan in `ResizePhases/README.md`: Redis and BullMQ → Postgres (pg-boss), worker inside the web process, Moli out (DOM audit
+by fetch, PDF printed by the visitor's browser), dependency diet. Production goes from 5 containers / ≈ 2.4 GB to
+2 containers / ≈ 0.9 GB with the same features and scan speed. Phases 1–4 are code (subagent-ready); phase 5 needs the user.
+
+| Phase | Status |
+|---|---|
+| 1 Queue, rate limits, cache on Postgres | ⬜ |
+| 2 Worker inside web | ⬜ |
+| 3 Moli out, browser PDF | ⬜ |
+| 4 Dependency diet, Postgres tuning | ⬜ |
+| 5 Resize, deploy, live checks (user) | ⬜ |
+
 ## Current stage (2026-10-23)
 
 Phases 1–5 are built, committed and pushed to `main` (GitHub `ishanchaudhary-eng/TSI_Business_Analyzer`). The whole UI works
