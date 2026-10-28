@@ -3,6 +3,18 @@
 Read this first in a new session, then SPEC.md and the brief for the current phase in `phases/`.
 Build phases **one at a time, in order**. Stop after each phase and show the user how to verify it.
 
+## Production shut down (2026-10-28)
+
+GCP project `tsi-project-cd47e` is deleted (VM, Firebase phone auth, keys, secrets, buckets, registry, snapshots)
+and billing is unlinked. It can be restored until about 2026-11-27 with `gcloud projects undelete tsi-project-cd47e`
+(billing must be relinked). The billing account `016F35-550617-14D46B` stays open: it also pays for
+`valid-progress-511709-e6`. Final data is in `I:\TSI\Business Report\backups\` (outside the repo):
+`seo-audit-final-20261028.dump` (`pg_restore -d <db> <file>`) and `verified-leads-20261028.csv` (5 leads).
+Outside GCP, still to be handled by the user: the DNS A record `audit` → 34.14.137.215, the Make.com scenario, the Turnstile widget.
+Redeploying needs a new project: `scripts/gcp/setup.sh`, then a new Firebase project and keys.
+**Bug to fix before the next deploy:** `deploy/backup.sh` never worked. `gcloud storage cp -` needs `storage.objects.get`, but the VM
+only has objectCreator, so the nightly backup failed with 403 and the bucket stayed empty.
+
 ## Resize to a small machine (2026-10-27, branch `reducing-the-version`)
 
 Plan in `ResizePhases/README.md`: Redis and BullMQ → Postgres (pg-boss), worker inside the web process, Moli out (DOM audit
