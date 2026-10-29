@@ -31,7 +31,7 @@ flowchart LR
     PLACES["Places API (New)<br/>Place Details · Nearby Search"]
     PSI["PageSpeed Insights API"]
     GEM["Gemini API<br/>gemini-3.5-flash-lite"]
-    subgraph FB["Firebase / Identity Platform<br/>project tsi-project-cd47e"]
+    subgraph FB["Firebase / Identity Platform<br/>project your-gcp-project"]
       IDT["Identity Toolkit + Secure Token<br/>sends SMS, issues ID tokens"]
       RECAP["reCAPTCHA<br/>(invisible, bot check before SMS)"]
       KEYS["Google public signing keys<br/>(securetoken JWKs)"]
@@ -83,7 +83,7 @@ flowchart LR
 ```
 
 Not connected yet: **CRM** (Zoho Bigin, deferred; leads wait in Postgres with `crmSyncedAt` null) and the **GCP VM**
-(deploy target, Phase 6: shared Compute Engine VM `tsi-apps-1` in asia-south1 that also hosts other apps; a shared edge Caddy in
+(deploy target, Phase 6: shared Compute Engine VM `shared-apps-1` in asia-south1 that also hosts other apps; a shared edge Caddy in
 front of web over the private network `edge-seo-audit`). **WhatsApp** was in the original plan and has been removed.
 
 ## 2. Our services
@@ -260,7 +260,7 @@ Defaults: 2 attempts, exponential backoff; a step that gives up is marked `faile
 
 ## 11. Still to come (Phase 6)
 
-Google Cloud deploy (shared Compute Engine VM `tsi-apps-1` in asia-south1 running the compose stack behind a shared edge Caddy; Cloud Build, Artifact Registry,
-Secret Manager, Cloud Logging, `pg_dump` backups to Cloud Storage) on `audit.thesalesinc.com`; CSP and security
-headers and the `/privacy` page are done (2026-10-24); the nightly `retention` job; the lead webhook to Make.com; real 404 status codes
+Google Cloud deploy (shared Compute Engine VM `shared-apps-1` in asia-south1 running the compose stack behind a shared edge Caddy; Cloud Build, Artifact Registry,
+Secret Manager, Cloud Logging, `pg_dump` backups to Cloud Storage) on `audit.example.com`; CSP and security
+headers are done (2026-10-24); the nightly `retention` job; the lead webhook to Make.com; real 404 status codes
 via `proxy.ts`; live SMS tests. CRM push later, when the user picks it up.

@@ -61,7 +61,7 @@ deploy, resize the VM, delete secrets. Never run phases in parallel, because eac
 
 ## Hand-off prompt for a subagent
 
-> Implement `ResizePhases/phase-N.md` on branch `reducing-the-version` in `I:\TSI\Business Report\project`. Read CLAUDE.md,
+> Implement `ResizePhases/phase-N.md` on branch `reducing-the-version` of this repo. Read CLAUDE.md,
 > TODO.md, SPEC.md, architecture.md and `ResizePhases/README.md` first. Keep behaviour the same unless the brief says
 > otherwise. Finish with `pnpm typecheck && pnpm lint && pnpm test && pnpm build`, update the docs the brief lists, mark
 > the phase done in `ResizePhases/README.md` and `TODO.md`, and commit. Do not rebuild the compose stack, deploy or push

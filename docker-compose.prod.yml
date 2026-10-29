@@ -1,4 +1,4 @@
-# Production on the shared GCP VM (tsi-apps-1), on top of docker-compose.yml:
+# Production on the shared GCP VM (shared-apps-1), on top of docker-compose.yml:
 #   docker compose -p seo-audit -f docker-compose.yml -f docker-compose.prod.yml up -d
 # scripts/deploy.sh copies both files to /opt/apps/seo-audit and writes its .env (config + Secret Manager values,
 # REGISTRY, IMAGE_TAG). Images come from Artifact Registry; nothing is built on the VM.

@@ -49,6 +49,6 @@ const sample: LeadRow = {
   },
 };
 
-const payload = buildLeadPayload(sample, process.env.APP_URL ?? "https://audit.thesalesinc.com", now, true);
+const payload = buildLeadPayload(sample, process.env.APP_URL ?? "https://audit.example.com", now, true);
 await postLead(url, payload);
 console.log(`Sent a test lead (${payload.lead.phone}, ${payload.business.name}) to the webhook.`);

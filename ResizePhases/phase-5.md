@@ -1,6 +1,6 @@
 # Phase 5 — Resize, deploy and live checks
 
-**Goal:** the slim stack live on `audit.thesalesinc.com`, with memory limits, runbook and VM size matching it.
+**Goal:** the slim stack live on `audit.example.com`, with memory limits, runbook and VM size matching it.
 
 This phase needs the user. Claude prepares the docs and commands; the user merges, deploys, resizes and deletes secrets.
 `scripts/deploy.sh` only builds a clean `main` that matches `origin/main`, so the branch must be merged first.
@@ -21,7 +21,7 @@ Phases 1 to 4 on `reducing-the-version`: two containers (web with the jobs insid
    `bash scripts/deploy.sh`. The first boot runs `prisma migrate deploy` (Phase 1 migration) and pg-boss creates the
    `pgboss` schema. Rollback is `bash scripts/deploy.sh <previous tag>`; note that the old image expects Redis and Moli,
    so a rollback needs the old compose files too (keep the previous commit's files at hand).
-3. **Clean the VM once (user, on `tsi-apps-1`).** `up -d --remove-orphans` in `vm-deploy.sh` stops the old `worker`,
+3. **Clean the VM once (user, on `shared-apps-1`).** `up -d --remove-orphans` in `vm-deploy.sh` stops the old `worker`,
    `redis` and `moli` containers. Then:
    ```bash
    sudo docker volume rm seo-audit_redis

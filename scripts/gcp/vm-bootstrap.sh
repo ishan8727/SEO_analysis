@@ -8,8 +8,8 @@ APPS="$*"
 export DEBIAN_FRONTEND=noninteractive
 step() { echo; echo "== VM: $*"; }
 
-if [ "$(hostname)" != "tsi-apps-1" ]; then
-  echo "This runs on the VM tsi-apps-1, but this machine is $(hostname). Nothing was changed."
+if [ "$(hostname)" != "shared-apps-1" ]; then
+  echo "This runs on the VM shared-apps-1, but this machine is $(hostname). Nothing was changed."
   exit 1
 fi
 [ -n "$APPS" ] || { echo "Usage: bash vm-bootstrap.sh <app> [<app> ...]"; exit 1; }
@@ -140,7 +140,7 @@ volumes:
 COMPOSE
 cat > /opt/edge/Caddyfile <<'CADDY'
 {
-	email grow@thesalesinc.com
+	email you@example.com
 }
 import sites/*.caddy
 CADDY

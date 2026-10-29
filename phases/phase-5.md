@@ -20,19 +20,19 @@ See SPEC.md section 14.
 - Phase 2–3: `PlacesSearch`, `src/lib/google/places.ts`, `src/lib/page-audit.ts`, `config/categories.json`.
 - Phase 4: the `gate` prop of `ScanLive` (src/components/scan/ScanLive.tsx), `ReportView` (it already shows "Download PDF" when `report.pdfUrl` is set), and the assets route (it already requires the unlock cookie for `pdf`).
 
-## Firebase setup (done 2026-10-23, project `tsi-project-cd47e`)
+## Firebase setup (done 2026-10-23, project `your-gcp-project`)
 
 - Blaze plan on; Phone sign-in on; web app "Local SEO Audit" registered; `.env` has the four Firebase keys and `NEXT_PUBLIC_PHONE_COUNTRIES`.
 - SMS region policy: allow list AE AL AT AU AW BH BQ BS GB UN US CA IC IN IO (the user's choice, updated 2026-10-23; IN confirmed on). `NEXT_PUBLIC_PHONE_COUNTRIES` mirrors it; change both together. This is the main protection against SMS pumping, because the browser asks Google to send the SMS directly and our rate limits can't stop it.
-- Authorized domains: `audit.thesalesinc.com` (production), `www.thesalesinc.com`, the Firebase domains, `localhost`, `dev.thesalesinc.com` (local testing, see setup.md 5C).
-- Browser API key: referrers `https://audit.thesalesinc.com/*`, `https://www.thesalesinc.com/*`, the two Firebase domains, `http://localhost:3000/*`, `http://dev.thesalesinc.com:3000/*`; APIs Identity Toolkit, Token Service, Installations, App Check, Firebase Management.
+- Authorized domains: `audit.example.com` (production), `www.example.com`, the Firebase domains, `localhost`, `dev.example.com` (local testing, see setup.md 5C).
+- Browser API key: referrers `https://audit.example.com/*`, `https://www.example.com/*`, the two Firebase domains, `http://localhost:3000/*`, `http://dev.example.com:3000/*`; APIs Identity Toolkit, Token Service, Installations, App Check, Firebase Management.
 - Test numbers (no SMS, code `123456`): `+1 650-555-0100`, `+44 7700 900123`.
 - Still the user's: a budget alert on the billing account (Billing → Budgets & alerts). Budgets only alert; they don't stop spending.
 - Later, once traffic is real: lower the per-IP SMS quota, and turn on reCAPTCHA SMS defense / App Check.
 
 ## Testing approach (user decision 2026-10-23)
 
-No emulator. Build to the official docs (https://firebase.google.com/docs/auth/web/phone-auth and https://firebase.google.com/docs/auth/admin/verify-id-tokens), cover the server side with unit tests (token checks mocked), and run the live end-to-end tests on `audit.thesalesinc.com` once the whole app is deployed. Firebase rejects `localhost` for phone auth, so the gate can't be exercised end to end locally.
+No emulator. Build to the official docs (https://firebase.google.com/docs/auth/web/phone-auth and https://firebase.google.com/docs/auth/admin/verify-id-tokens), cover the server side with unit tests (token checks mocked), and run the live end-to-end tests on `audit.example.com` once the whole app is deployed. Firebase rejects `localhost` for phone auth, so the gate can't be exercised end to end locally.
 
 ## Tasks
 
@@ -54,7 +54,7 @@ No emulator. Build to the official docs (https://firebase.google.com/docs/auth/w
    On success: set `unlock_<scanId>` via `signUnlock` + `unlockCookieOptions`, return `{ ok: true }`, and `enqueuePdf`. Errors: 400 `INVALID_INPUT`, 401 `{ code: "VERIFY_FAILED" }` for a bad, stale or non-phone token, 403 `{ code: "COUNTRY_NOT_SUPPORTED" }`, 404, 429.
 5. ✅ **Gate card** (`src/components/scan/Gate.tsx`, passed as `ScanLive`'s `gate` prop):
    1. Role select. Phone input with a **country code select**, defaulting to the scanned business's `countryCode` (from Google), else `DEFAULT_COUNTRY`, and limited to `NEXT_PUBLIC_PHONE_COUNTRIES` when set. Add `countryCode` to the teaser payload for this. Format with libphonenumber-js `AsYouType`; the number must be `isValid()` before submitting.
-   2. Consent line under the button: "We'll text you a code. By continuing you agree to our [privacy policy]." (GDPR/UK and similar laws apply to international leads.)
+   2. Line under the button: "We'll text you a 6-digit code. Standard SMS rates may apply." (The privacy-policy link was removed with the old branding, 2026-10-28; add one back with a new privacy page.)
    3. "Send code": invisible `RecaptchaVerifier`, then `signInWithPhoneNumber(auth, e164, verifier)`. Set `auth.languageCode` from the browser so the SMS and reCAPTCHA are localised.
    4. 6-digit code input, then `confirmationResult.confirm(code)`, then `user.getIdToken()`, then POST `/api/verify/confirm`, then `signOut(auth)`, then refresh the scan (the report unlocks in place).
    - "Resend code" after 60 s. "Change number" goes back to step 1.
@@ -75,7 +75,7 @@ Local (before deploy):
 - A raw phone number or ID token never appears in logs (`idToken` in the pino redaction list).
 - No server secret names in `.next/static`; the Firebase web config being there is expected (it's public).
 
-Live, on `audit.thesalesinc.com` after the whole app is deployed (Phase 6):
+Live, on `audit.example.com` after the whole app is deployed (Phase 6):
 - Test number `+1 650-555-0100` / `123456`: gate → code → report unlocks in place.
 - One real SMS to an Indian number works end to end; a wrong code shows the error copy.
 - Autocomplete finds businesses in IN, US and GB without picking a country; a full scan of a non-Indian business (e.g. a London dentist) finishes with competitors, a NAP phone match and a score.

@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useState, type ReactNode } from "react";
 import { ArrowRight, TriangleAlert } from "lucide-react";
-import { SalesAsciiBackground } from "@/components/landing/SalesAsciiBackground";
-import { SalesAsciiLogo } from "@/components/landing/SalesAsciiLogo";
-import { SalesLoader } from "@/components/loader/SalesLoader";
+import { Logo } from "@/components/brand/Logo";
+import { PaperBackground } from "@/components/brand/PaperBackground";
+import { SketchLoader } from "@/components/loader/SketchLoader";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,11 +39,11 @@ export function ScanLive({ initial, gate }: { initial: ScanPayload; gate?: React
   const scan = useScanPolling(initial);
   const done = scan.status === "done";
   // Loader over the page until the results are in; not for a scan that was already finished. The
-  // background sits dim underneath and settles, and the compact logo appears, once it's gone.
+  // compact logo appears once it's gone.
   const [withLoader] = useState(initial.status !== "done" && initial.status !== "failed");
   const [loaded, setLoaded] = useState(!withLoader);
   const loader = withLoader && (
-    <SalesLoader
+    <SketchLoader
       progress={auditProgress(scan)}
       complete={done || scan.status === "failed"}
       onComplete={() => setLoaded(true)}
@@ -51,8 +51,8 @@ export function ScanLive({ initial, gate }: { initial: ScanPayload; gate?: React
   );
   const backdrop = (
     <>
-      <SalesAsciiBackground active={loaded} />
-      {loaded && <SalesAsciiLogo variant="compact" />}
+      <PaperBackground />
+      {loaded && <Logo variant="compact" />}
     </>
   );
 

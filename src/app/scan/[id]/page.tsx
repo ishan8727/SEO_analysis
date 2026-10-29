@@ -6,6 +6,7 @@ import { Gate } from "@/components/scan/Gate";
 import { ScanLive } from "@/components/scan/ScanLive";
 import { env } from "@/lib/env";
 import { loadScanRow, toLocked, toReport } from "@/lib/scan-view";
+import { SITE_NAME } from "@/lib/site";
 import { unlockCookieName, verifyUnlock } from "@/lib/unlock";
 
 // Live scan page (SPEC.md section 9). Renders the current state on the server, then
@@ -32,10 +33,10 @@ export default async function ScanPage({ params }: PageProps<"/scan/[id]">) {
   const { name, address, websiteUrl } = initial.business;
 
   return (
-    // Dark brand theme over the ASCII background; top padding clears the fixed logo (ScanLive).
-    <main className="dark brand-theme mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-28 pb-10 text-foreground sm:pb-16 md:pt-36">
+    // Sketch theme over the paper background; top padding clears the fixed logo (ScanLive).
+    <main className="sketch-theme mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 pt-28 pb-10 text-foreground sm:pb-16 md:pt-36">
       <header className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">SEO audit by TSI</p>
+        <p className="text-sm text-muted-foreground">{SITE_NAME}</p>
         <h1 className="text-2xl font-semibold tracking-tight break-words sm:text-3xl">{name}</h1>
         {(address || websiteUrl) && (
           <p className="text-sm break-words text-muted-foreground">{[address, websiteUrl].filter(Boolean).join(" · ")}</p>

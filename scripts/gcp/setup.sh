@@ -1,19 +1,20 @@
 #!/bin/bash
 # One-shot Google Cloud setup: the shared apps VM (runbook.md Part A) and the seo-audit app (Part B).
-# Run in Cloud Shell with vm-bootstrap.sh next to it: bash setup.sh
+# Run in Cloud Shell with vm-bootstrap.sh next to it:
+#   GCP_PROJECT=<project id> APP_DOMAIN=<site domain> bash setup.sh
 # Idempotent: anything that already exists is kept, so it is safe to rerun after a failure.
 # Left by hand: the DNS record (printed at the end) and a budget alert.
 set -eo pipefail
 
-PROJECT=tsi-project-cd47e
+PROJECT=${GCP_PROJECT:?Set GCP_PROJECT to your Google Cloud project id}
 REGION=asia-south1
 ZONE=asia-south1-a
-VM=tsi-apps-1
-TAG=tsi-apps
-SA_NAME=tsi-apps-vm
+VM=shared-apps-1
+TAG=shared-apps
+SA_NAME=shared-apps-vm
 SA=$SA_NAME@$PROJECT.iam.gserviceaccount.com
 APP=seo-audit
-DOMAIN=audit.thesalesinc.com
+DOMAIN=${APP_DOMAIN:?Set APP_DOMAIN to the site's domain, e.g. audit.example.com}
 BUCKET=gs://$PROJECT-$APP-backups
 BOOTSTRAP="$(cd "$(dirname "$0")" && pwd)/vm-bootstrap.sh"
 
@@ -60,22 +61,22 @@ done
 echo "   ok"
 
 step "Static IP"
-if ! have gcloud compute addresses describe tsi-apps-ip --region=$REGION; then
-  gcloud compute addresses create tsi-apps-ip --region=$REGION
+if ! have gcloud compute addresses describe shared-apps-ip --region=$REGION; then
+  gcloud compute addresses create shared-apps-ip --region=$REGION
 fi
-IP=$(gcloud compute addresses describe tsi-apps-ip --region=$REGION --format='value(address)')
+IP=$(gcloud compute addresses describe shared-apps-ip --region=$REGION --format='value(address)')
 echo "   $IP"
 
 step "Firewall (80/443 open, SSH only through IAP)"
 if ! have gcloud compute networks describe default; then
   gcloud compute networks create default --subnet-mode=auto
 fi
-if ! have gcloud compute firewall-rules describe tsi-apps-allow-web; then
-  gcloud compute firewall-rules create tsi-apps-allow-web --network=default --direction=INGRESS \
+if ! have gcloud compute firewall-rules describe shared-apps-allow-web; then
+  gcloud compute firewall-rules create shared-apps-allow-web --network=default --direction=INGRESS \
     --action=ALLOW --rules=tcp:80,tcp:443,udp:443 --source-ranges=0.0.0.0/0 --target-tags=$TAG
 fi
-if ! have gcloud compute firewall-rules describe tsi-apps-allow-iap-ssh; then
-  gcloud compute firewall-rules create tsi-apps-allow-iap-ssh --network=default --direction=INGRESS \
+if ! have gcloud compute firewall-rules describe shared-apps-allow-iap-ssh; then
+  gcloud compute firewall-rules create shared-apps-allow-iap-ssh --network=default --direction=INGRESS \
     --action=ALLOW --rules=tcp:22 --source-ranges=35.235.240.0/20 --target-tags=$TAG
 fi
 # Google's default rules open SSH/RDP to the whole internet
@@ -89,7 +90,7 @@ if ! have gcloud compute instances describe $VM --zone=$ZONE; then
   gcloud compute instances create $VM --zone=$ZONE --machine-type=e2-medium \
     --image-family=debian-12 --image-project=debian-cloud \
     --boot-disk-size=50GB --boot-disk-type=pd-balanced \
-    --address=tsi-apps-ip --tags=$TAG \
+    --address=shared-apps-ip --tags=$TAG \
     --service-account=$SA --scopes=cloud-platform \
     --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring \
     --metadata=enable-oslogin=TRUE
@@ -98,13 +99,13 @@ else
 fi
 
 step "Daily disk snapshots (02:30 IST, kept 7 days)"
-if ! have gcloud compute resource-policies describe tsi-apps-daily --region=$REGION; then
-  gcloud compute resource-policies create snapshot-schedule tsi-apps-daily --region=$REGION \
+if ! have gcloud compute resource-policies describe shared-apps-daily --region=$REGION; then
+  gcloud compute resource-policies create snapshot-schedule shared-apps-daily --region=$REGION \
     --daily-schedule --start-time=21:00 --max-retention-days=7 --on-source-disk-delete=keep-auto-snapshots
 fi
 POLICIES=$(gcloud compute disks describe $VM --zone=$ZONE --format='value(resourcePolicies)')
-if [[ "$POLICIES" != *tsi-apps-daily* ]]; then
-  gcloud compute disks add-resource-policies $VM --zone=$ZONE --resource-policies=tsi-apps-daily
+if [[ "$POLICIES" != *shared-apps-daily* ]]; then
+  gcloud compute disks add-resource-policies $VM --zone=$ZONE --resource-policies=shared-apps-daily
 fi
 echo "   ok"
 
@@ -217,7 +218,7 @@ RESOLVED=$( (dig +short $DOMAIN 2>/dev/null || nslookup $DOMAIN 2>/dev/null | aw
 if [ "$RESOLVED" = "$IP" ]; then
   echo "   $DOMAIN -> $IP (ok)"
 else
-  echo "   TO DO: at your DNS host for thesalesinc.com add an A record: name 'audit' -> $IP, TTL 300."
+  echo "   TO DO: at your DNS host add an A record: $DOMAIN -> $IP, TTL 300."
   echo "   On Cloudflare set it to 'DNS only' (grey cloud). It resolves to '${RESOLVED:-nothing}' right now."
 fi
 

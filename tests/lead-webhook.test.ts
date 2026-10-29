@@ -51,7 +51,7 @@ const LEAD = {
 };
 const job = { data: { leadId: "lead_1" }, attemptsMade: 0 } as Job<{ leadId: string }>;
 const fetchMock = vi.fn();
-const APP = "https://audit.thesalesinc.com";
+const APP = "https://audit.example.com";
 
 beforeEach(() => {
   vi.clearAllMocks();

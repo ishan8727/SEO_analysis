@@ -1,15 +1,15 @@
 #!/bin/bash
-# Build and deploy seo-audit to the shared VM tsi-apps-1 (runbook.md section 2). Run from Git Bash or
+# Build and deploy seo-audit to the shared VM shared-apps-1 (runbook.md section 2). Run from Git Bash or
 # Cloud Shell with gcloud signed in as a project Owner.
 #   bash scripts/deploy.sh          build the current commit in Cloud Build, then deploy it
 #   bash scripts/deploy.sh <tag>    deploy an image that's already built (rollback); tags are commit SHAs
 # Needs .env.deploy (gitignored) with the public build values; see runbook.md section 2.
 set -eo pipefail
 
-PROJECT=tsi-project-cd47e
+PROJECT=${GCP_PROJECT:?Set GCP_PROJECT to your Google Cloud project id, e.g. GCP_PROJECT=my-project bash scripts/deploy.sh}
 REGION=asia-south1
 ZONE=asia-south1-a
-VM=tsi-apps-1
+VM=shared-apps-1
 APP=seo-audit
 REGISTRY=$REGION-docker.pkg.dev/$PROJECT/$APP
 BUILD_SA=projects/$PROJECT/serviceAccounts/$APP-build@$PROJECT.iam.gserviceaccount.com
@@ -81,4 +81,4 @@ step "Deploying $TAG on $VM"
 "${SSH[@]}" --command="sudo bash $APP-deploy/vm-deploy.sh $TAG" </dev/null
 
 echo
-echo "Live: https://audit.thesalesinc.com (roll back with: bash scripts/deploy.sh <previous tag>)"
+echo "Live: the APP_URL in deploy/seo-audit.env (roll back with: bash scripts/deploy.sh <previous tag>)"

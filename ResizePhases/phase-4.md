@@ -58,7 +58,7 @@ Phase 3: two containers (web, postgres). The image still ships the full producti
 ## Acceptance criteria
 
 - `pnpm typecheck && pnpm lint && pnpm test && pnpm build` pass.
-- The token tests above pass. On `http://dev.thesalesinc.com:3000` (TODO.md hosts-file setup), the gate with the Firebase
+- The token tests above pass. On `http://dev.example.com:3000` (TODO.md hosts-file setup), the gate with the Firebase
   test number `+1 650-555-0100` / `123456` still unlocks the report.
 - `grep -rE "firebase-admin|from \"cn\"" src tests` finds nothing.
 - Image size recorded, and smaller than after Phase 3.

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Alfa_Slab_One, Geist, Geist_Mono, Kalam } from "next/font/google";
+import { SITE_NAME } from "@/lib/site";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,9 +13,22 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+// Sketch look: Kalam for handwritten headings, Alfa Slab One for the logo's "SEO".
+const kalam = Kalam({
+  variable: "--font-hand",
+  weight: ["400", "700"],
+  subsets: ["latin"],
+});
+
+const slab = Alfa_Slab_One({
+  variable: "--font-slab",
+  weight: "400",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  // Pages set a short title; the template adds the brand.
-  title: { default: "TSI - SEO audit", template: "%s · TSI - SEO audit" },
+  // Pages set a short title; the template adds the site name.
+  title: { default: SITE_NAME, template: `%s · ${SITE_NAME}` },
   description: "See how your business shows up on Google and what to fix first.",
 };
 
@@ -22,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${kalam.variable} ${slab.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

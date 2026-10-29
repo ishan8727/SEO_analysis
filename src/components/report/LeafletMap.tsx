@@ -36,8 +36,8 @@ export default function LeafletMap({ pins }: { pins: MapPin[] }) {
           radius={p.self ? 10 : 7}
           pathOptions={
             p.self
-              ? { color: "#ffffff", weight: 3, fillColor: "#FB2B2F", fillOpacity: 1 }
-              : { color: "#ffffff", weight: 2, fillColor: "#71717a", fillOpacity: 0.9 }
+              ? { color: "#fbf7f0", weight: 3, fillColor: "#1f1b17", fillOpacity: 1 }
+              : { color: "#fbf7f0", weight: 2, fillColor: "#8a7f73", fillOpacity: 0.9 }
           }
         >
           <Tooltip direction="top" offset={[0, -6]} permanent={p.self}>

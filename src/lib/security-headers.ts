@@ -8,7 +8,7 @@
 
 export interface SecurityHeaderOptions {
   isDev: boolean;
-  firebaseAuthDomain?: string; // NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, e.g. tsi-project-cd47e.firebaseapp.com
+  firebaseAuthDomain?: string; // NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, e.g. your-gcp-project.firebaseapp.com
 }
 
 const MAPS = ["https://maps.googleapis.com", "https://maps.gstatic.com"]; // Places Autocomplete (Maps JS SDK)

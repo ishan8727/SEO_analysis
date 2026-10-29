@@ -82,11 +82,11 @@ export function ResultsWall({ mode, gate, ready }: { mode: "local" | "online"; g
 
       <DialogPrimitive.Root open={open} onOpenChange={setOpen} modal={false} disablePointerDismissal>
         <DialogPrimitive.Portal keepMounted>
-          <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm duration-300 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
-          {/* Portaled outside <main>, so the popup carries the dark brand scope itself. */}
-          <DialogPrimitive.Popup className="dark brand-theme fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl text-sm text-foreground shadow-[0_0_60px_-12px_rgb(251_43_47/45%)] outline-none ease-out sm:max-w-lg data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-8 data-open:zoom-in-95 data-open:duration-400 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:duration-200">
+          <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-[rgb(31_27_23/0.35)] backdrop-blur-sm duration-300 data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+          {/* Portaled outside <main>, so the popup carries the sketch scope itself. */}
+          <DialogPrimitive.Popup className="sketch-theme fixed top-1/2 left-1/2 z-50 max-h-[calc(100dvh-2rem)] w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl text-sm text-foreground outline-none ease-out sm:max-w-lg data-open:animate-in data-open:fade-in-0 data-open:slide-in-from-bottom-8 data-open:zoom-in-95 data-open:duration-400 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95 data-closed:duration-200">
             <DialogPrimitive.Title className="sr-only">Verify your number to view your results</DialogPrimitive.Title>
-            <div className="[&_[data-slot=card]]:bg-black/85 [&_[data-slot=card]]:ring-primary/30">{gate}</div>
+            <div>{gate}</div>
             <DialogPrimitive.Close
               render={<Button variant="ghost" size="icon-sm" className="absolute top-3 right-3" />}
             >

@@ -34,11 +34,11 @@ export function toneFor(score: number): Tone {
   return "bad";
 }
 
-// Lighter shades on dark pages (the scan page) for AA contrast; the report and PDF stay light.
+// Darker shades: AA contrast on the paper background and on the white PDF.
 export const TONE_TEXT: Record<Tone, string> = {
-  good: "text-emerald-600 dark:text-emerald-400",
-  ok: "text-amber-600 dark:text-amber-400",
-  bad: "text-red-600 dark:text-red-400",
+  good: "text-emerald-700",
+  ok: "text-amber-700",
+  bad: "text-red-700",
 };
 
 export const TONE_BG: Record<Tone, string> = {

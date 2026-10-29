@@ -3,17 +3,19 @@
 Read this first in a new session, then SPEC.md and the brief for the current phase in `phases/`.
 Build phases **one at a time, in order**. Stop after each phase and show the user how to verify it.
 
-## Production shut down (2026-10-28)
+## Own repo, own brand (2026-10-28)
 
-GCP project `tsi-project-cd47e` is deleted (VM, Firebase phone auth, keys, secrets, buckets, registry, snapshots)
-and billing is unlinked. It can be restored until about 2026-11-27 with `gcloud projects undelete tsi-project-cd47e`
-(billing must be relinked). The billing account `016F35-550617-14D46B` stays open: it also pays for
-`valid-progress-511709-e6`. Final data is in `I:\TSI\Business Report\backups\` (outside the repo):
-`seo-audit-final-20261028.dump` (`pg_restore -d <db> <file>`) and `verified-leads-20261028.csv` (5 leads).
-Outside GCP, still to be handled by the user: the DNS A record `audit` → 34.14.137.215, the Make.com scenario, the Turnstile widget.
-Redeploying needs a new project: `scripts/gcp/setup.sh`, then a new Firebase project and keys.
-**Bug to fix before the next deploy:** `deploy/backup.sh` never worked. `gcloud storage cp -` needs `storage.objects.get`, but the VM
-only has objectCreator, so the nightly backup failed with 403 and the bucket stayed empty.
+- Repo: GitHub `ishan8727/SEO_analysis` (public; `origin`). Site name "SEO Audit" (`SITE_NAME` in `src/lib/site.ts`).
+- The earlier production deployment is shut down and its cloud project deleted; there is no live site. Redeploying needs a
+  new GCP project, Firebase project, keys and domain: `GCP_PROJECT=… APP_DOMAIN=… bash scripts/gcp/setup.sh`, then set the
+  real domain in `deploy/seo-audit.caddy` and `deploy/seo-audit.env` (placeholders `audit.example.com`, `your-gcp-project`).
+- **Bug to fix before the next deploy:** `deploy/backup.sh` never worked. `gcloud storage cp -` needs `storage.objects.get`,
+  but the VM only had objectCreator, so the nightly backup failed with 403 and the bucket stayed empty.
+- Sketch theme (user, 2026-10-28): ink on paper. `.sketch-theme` in globals.css (paper `#f4ece1`, ink `#1f1b17`, Kalam headings,
+  wobbly card/button outlines), `src/components/brand/PaperBackground.tsx` (grain + faint doodles), `Logo.tsx` (inline SVG:
+  slab "SE", magnifier "O", handwritten "audit" with a tick; draws in on load, wiggles on hover), `loader/SketchLoader.tsx`.
+  Icons: `src/app/icon.svg`, then `pnpm icons:build` writes `apple-icon.png` and `favicon.ico`.
+- No privacy page (removed with the old branding, user 2026-10-28). Add one before collecting real phone numbers again.
 
 ## Resize to a small machine (2026-10-27, branch `reducing-the-version`)
 
@@ -31,9 +33,9 @@ by fetch, PDF printed by the visitor's browser), dependency diet. Production goe
 
 ## Current stage (2026-10-23)
 
-Phases 1–5 are built, committed and pushed to `main` (GitHub `ishanchaudhary-eng/TSI_Business_Analyzer`). The whole UI works
-locally (`pnpm start:app`, see `setup.md`): search → live scan → teaser → phone gate → full report → PDF. **Next: Phase 6** (hardening + deploy to
-`audit.thesalesinc.com` on **Google Cloud**: one Compute Engine VM in asia-south1 running the compose stack; brief refreshed 2026-10-24). The phone gate's SMS step can only be proven live after
+Phases 1–5 are built, committed and pushed to `main`. The whole UI works
+locally (`pnpm start:app`, see `setup.md`): search → live scan → teaser → phone gate → full report → PDF. **Next: Phase 6** (hardening + deploy
+on **Google Cloud**: one Compute Engine VM in asia-south1 running the compose stack; brief refreshed 2026-10-24). The phone gate's SMS step can only be proven live after
 deploy. `architecture.md` maps every service and integration.
 
 ## Status
@@ -138,7 +140,6 @@ Also committed: `architecture.md` (service map) and `setup.md` (run it on Window
   shapes. So the PDF leaves out the homepage screenshots (`print:hidden`), and ScoreRing sets SVG colours as attributes too.
 - The print page answers HTTP 200 with the not-found page for a missing/wrong token (same PPR limitation as Phase 4); no report data is sent.
 - If a visitor closes the reCAPTCHA challenge, the gate button stays on "Sending…" until they reload. Revisit after live testing.
-- The consent line links to `/privacy`, which doesn't exist yet: Phase 6 must add the privacy policy page.
 - Live checks left for after deploy (listed under "Phase 6 — next").
 - Deploy needs the new build args (`NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_PHONE_COUNTRIES`) and `INTERNAL_APP_URL` for the worker.
 - Follow-up `ff8af71`: the print page takes `INTERNAL_TOKEN` in the `x-internal-token` header (the URL form leaked into the dev request
@@ -155,27 +156,18 @@ Also committed: `architecture.md` (service map) and `setup.md` (run it on Window
 - Verified (Playwright + Edge, demo scans): no result in 11 polls of a live scan or in its HTML; pop-up opens only after the audit
   finishes; 390 px has no horizontal scroll; verified visitor gets no pop-up. Tests: `tests/scan-routes.test.ts`, `tests/scan-view.test.ts`.
 
-## Branding (2026-10-26, user request)
-- Favicon + app icons from the brand GIF frame 0 (`src/app/favicon.ico` 16/32/48, `icon.png` 192, `apple-icon.png` 180).
-- Wording: no "local SEO audit"/"free" anywhere; title template "… · TSI - SEO audit", labels "SEO audit by TSI".
-- Logo: the ASCII reveal is pre-rendered (`pnpm logo:build` films `AsciiLogoSource` on the dev-only `/dev/logo-capture`,
-  404 in production) into `public/brand/logo-{hero,compact}.webp` (play once) + stills + hover stills.
-  2026-10-26 fix (user: "broken/ugly", esp. on mobile): first capture was at 2x, where the glyphs' shading texture
-  shows and looks broken once scaled. Now captured at 1x (laptop look: hero 358×179 302 KB after the 20% size cut, compact 180×90 67 KB)
-  and scaled up with `image-rendering: pixelated`; widths give whole-number scales (phone hero 239 px, compact 120 px). `SalesAsciiLogo` is now a plain `<img>` in the server HTML: shows ~150 ms after load instead of
-  ~1.5 s after the font and canvas work; glow after the reveal, hover/tap = stronger glow, lift, arrows nudge.
-  Hero 358 px on laptops, 239 px on phones (20% smaller, user 2026-10-26). Check on a real iPhone after deploy (the old canvas logo was missing there).
+## Branding
+- Wording: no "local SEO audit"/"free" anywhere; title template "… · SEO Audit". Look and logo: see "Own repo, own brand" above.
 
 ## Phase 6 — next
 
-**Live (2026-10-26):** https://audit.thesalesinc.com, deployed `c02cf75` by the user (`bash scripts/deploy.sh`; Claude's runs of
-the production deploy are blocked by the auto-mode classifier). First deploy `d5faf83` crash-looped: the runtime image lacked
-`src/lib/security-headers.ts`, which `next.config.ts` imports (fixed in `c02cf75`). Next: Phase 5 live checks (below), the
-acceptance checks, then tasks 14 (e2e), 15 (load test), 16 (PostHog), the uptime check. Branches (2026-10-26): only `main`
-remains (user deleted the rest, locally and on GitHub). GitHub's `main` is what's live; `scripts/deploy.sh` builds only a
+**Was live (2026-10-26 to 2026-10-28)**, deployed with `bash scripts/deploy.sh` by the user (Claude's runs of the production
+deploy are blocked by the auto-mode classifier). First deploy crash-looped: the runtime image lacked
+`src/lib/security-headers.ts`, which `next.config.ts` imports (fixed in `c02cf75`). Left: Phase 5 live checks (below), the
+acceptance checks, then tasks 14 (e2e), 15 (load test), 16 (PostHog), the uptime check. `scripts/deploy.sh` builds only a
 clean `main` that matches `origin/main` (workflow: runbook.md section 2).
 - Deploy pipeline (2026-10-26): commit → `scripts/deploy.sh` → Cloud Build (`cloudbuild.yaml`, SA `seo-audit-build`, source
-  bucket `gs://tsi-project-cd47e-seo-audit-build`) → Artifact Registry `seo-audit/{app,moli}:<sha>` → VM `deploy/vm-deploy.sh`
+  bucket `gs://<project>-seo-audit-build`) → Artifact Registry `seo-audit/{app,moli}:<sha>` → VM `deploy/vm-deploy.sh`
   (`.env` from Secret Manager, pull, up, edge reload, backup timer, health wait). Rollback: `scripts/deploy.sh <tag>`.
   No auto-deploy on push yet (CI only checks). Public build values in `.env.deploy` (gitignored, created 2026-10-26).
 - Make.com webhook (`src/worker/jobs/lead-webhook.ts`): URL from the user stored as secret `seo-audit-LEAD_WEBHOOK_URL`
@@ -184,13 +176,12 @@ clean `main` that matches `origin/main` (workflow: runbook.md section 2).
   rating/reviews/hours (30-day rule). Test event sent with `pnpm lead:test` (Firebase test number, `test: true`), Make answered 2xx.
 
 Hosting decided 2026-10-24 (user): **GCP only**, Railway dropped. One Compute Engine VM (`e2-medium`, asia-south1) running
-compose + Caddy for HTTPS (2026-10-26: shared host `tsi-apps-1` for several apps, one edge Caddy, per-app `seo-audit-*` resources), images from Cloud Build / Artifact Registry, secrets in Secret Manager, Postgres + Redis on the VM
-with nightly `pg_dump` to Cloud Storage, in project `tsi-project-cd47e` (confirmed 2026-10-24). Full task list in `phases/phase-6.md`.
-- [ ] **User:** one-time GCP setup, `runbook.md` section 1: Part A shared host (VM, firewall, edge Caddy), Part B for `seo-audit`
-  (registry, bucket, secrets, key, DNS). 2026-10-26: `scripts/gcp/setup.sh` run, all checks green (VM `tsi-apps-1`
-  34.14.137.215, Docker + compose 5.6.1, json-file logs → Ops Agent, metadata blocked for containers, edge Caddy on `edge-seo-audit`).
-  User then added the two real secrets and the DNS A record `audit` → 34.14.137.215 (verified: 8 secrets, DNS resolves). Phase 6 code waits on it
-  only for the live deploy.
+compose + Caddy for HTTPS (2026-10-26: shared host `shared-apps-1` for several apps, one edge Caddy, per-app `seo-audit-*` resources), images from Cloud Build / Artifact Registry, secrets in Secret Manager, Postgres + Redis on the VM
+with nightly `pg_dump` to Cloud Storage. Full task list in `phases/phase-6.md`.
+- [ ] **User:** one-time GCP setup in a new project, `runbook.md` section 1: Part A shared host (VM, firewall, edge Caddy), Part B
+  for `seo-audit` (registry, bucket, secrets, key, DNS). `scripts/gcp/setup.sh` does both (it ran green on the old project:
+  Docker + compose, json-file logs → Ops Agent, metadata blocked for containers, edge Caddy on `edge-seo-audit`). Then add the
+  two real secrets and the DNS A record.
 
 Notes carried over:
 - e2e smoke: search → scan → teaser → **Firebase gate** (not WhatsApp/OTP). The gate can't be automated past reCAPTCHA; in CI, fake
@@ -199,15 +190,15 @@ Notes carried over:
   without nonces (nonces don't work with Cache Components / PPR); see SPEC.md section 14. Checked in Edge: landing (Turnstile,
   Places autocomplete), report (OSM tiles), gate (reCAPTCHA, Firebase) load with zero CSP violations; prod build has no
   `unsafe-eval`; HSTS from prod builds only. Tests: `tests/security-headers.test.ts`.
-- [x] `/privacy` page (2026-10-24): operator The Sales Inc, contact grow@thesalesinc.com; linked from the landing page and the gate.
-  Keep it in step with the code (it names Google, Cloudflare, Make.com, Google Cloud, OSM; redesigned in the brand theme with the logo 2026-10-25; retention 30 days / 90 days / leads kept).
+- [ ] Privacy page: removed 2026-10-28 with the old branding. A new one should name the operator, Google, Cloudflare,
+  Make.com, the host and OSM, and the retention (30 days / 90 days / leads kept); link it from the landing page and the gate.
 - [ ] **Lead webhook to Make.com** (user task, 2026-10-24): after `/api/verify/confirm` stores a verified lead, POST it to a
   webhook URL the user will provide (`LEAD_WEBHOOK_URL`, server-only). Payload: phone E.164, country, role, scanId, business
   name/website, score, report URL. Send from the worker (queued job with retries), not inline in the request; set
-  `crmSyncedAt` on success. The privacy page already lists Make.com.
+  `crmSyncedAt` on success.
 - GCP VM: build args `NEXT_PUBLIC_GOOGLE_BROWSER_KEY`, `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_FIREBASE_*`,
   `NEXT_PUBLIC_PHONE_COUNTRIES`, `ONLINE_MODE` go to Cloud Build; `INTERNAL_APP_URL=http://web:3000` and `MOLI_URL` stay as in
-  compose; custom domain `audit.thesalesinc.com` (already in Firebase authorized domains and the API key's referrers); real
+  compose; the custom domain must be in Firebase authorized domains and the API key's referrers; real
   Turnstile keys are in `.env.railway` (gitignored, not loaded locally; the site key is copied to `.env.deploy`, the secret is in Secret Manager;
   secret verified with siteverify 2026-10-23). Widget mode Managed;
   the app renders it `interaction-only`. Localhost keeps the invisible test key `1x00000000000000000000BB`.
@@ -231,7 +222,7 @@ Live checks after deploy (Phase 5 acceptance):
 - Categories: 25 + "Something else" in `config/categories.json`; types checked against real Bengaluru results in Phase 3.
 - Online-only mode: ships in v1 behind `ONLINE_MODE=on|off`.
 - Phone verification: **Firebase Phone Auth (SMS)**, decided 2026-10-23; no WhatsApp. Report unlocks on the page + PDF download.
-- Firebase (`tsi-project-cd47e`) is configured (2026-10-23); details in phases/phase-5.md "Firebase setup". Still the user's: a budget alert. Testing is live on `audit.thesalesinc.com` after deploy (no emulator).
+- Firebase was configured on the old project (2026-10-23); the steps are in phases/phase-5.md "Firebase setup" (redo them on a new project). Testing is live on the deployed domain (no emulator).
 - CRM: deferred by the user; leads stay in Postgres (`crmSyncedAt` null) for a later backfill.
 
 ## Waiting on the user
@@ -258,14 +249,14 @@ Live checks after deploy (Phase 5 acceptance):
   Kill project node processes in PowerShell:
   `Get-CimInstance Win32_Process -Filter "Name='node.exe'" | ? { $_.CommandLine -like "*Business Report\project*" } | % { taskkill /PID $_.ProcessId /T /F }`
 - Phone gate fails on `localhost` with `auth/invalid-app-credential` (firebase-js-sdk#8387), even for test numbers.
-  Test it on `http://dev.thesalesinc.com:3000` (hosts file `127.0.0.1 dev.thesalesinc.com`; added to Firebase
+  Test it on `http://dev.example.com:3000` (hosts file `127.0.0.1 dev.example.com`; added to Firebase
   authorized domains + Firebase browser key referrers 2026-10-23; `allowedDevOrigins` in next.config.ts).
 - `pnpm test` needs Redis on localhost:6379 (rate-limit tests use DB 15).
 - Local `.env` uses Cloudflare's always-pass Turnstile test keys. Don't read `.env` (denied in settings); edit specific keys with sed.
 - `NEXT_PUBLIC_*` and `ONLINE_MODE` are Docker build args (inlined into the client bundle). `DEFAULT_COUNTRY` no longer is (2026-10-23).
   After changing one in `.env`, restart `pnpm dev` (or rebuild the image).
 - Firebase Auth settings (SMS regions, authorized domains, test numbers) aren't in the Firebase MCP tools; they were read and changed
-  through the Identity Toolkit admin API (`identitytoolkit.googleapis.com/admin/v2/projects/tsi-project-cd47e/config`) with the
-  Firebase CLI login (`firebase login`, account ishanchaudhary@thesalesinc.com, has the cloud-platform scope).
+  through the Identity Toolkit admin API (`identitytoolkit.googleapis.com/admin/v2/projects/<project>/config`) with the
+  Firebase CLI login (`firebase login`, has the cloud-platform scope).
 - `pnpm prisma migrate dev` refuses to run non-interactively: generate SQL with `prisma migrate diff --from-config-datasource
   --to-schema prisma/schema.prisma --script`, save it as a migration folder, then `pnpm prisma migrate deploy`.

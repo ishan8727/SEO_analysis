@@ -1,17 +1,17 @@
 # Phase 6 — Hardening, tests, deploy
 
-**Goal:** production-ready on **Google Cloud**: the compose stack on a shared Compute Engine VM, served at `audit.thesalesinc.com`.
+**Goal:** production-ready on **Google Cloud**: the compose stack on a shared Compute Engine VM, served at `audit.example.com`.
 
 Decided 2026-10-24 (user): GCP only, Railway dropped. One VM with compose (not Cloud Run), region **asia-south1 (Mumbai)**.
-2026-10-26 (user): the VM will host more apps than this one, so it is a shared host (`tsi-apps-1`): one edge Caddy for
+2026-10-26 (user): the VM will host more apps than this one, so it is a shared host (`shared-apps-1`): one edge Caddy for
 all apps, each app its own compose project, network, database and Google resources. Layout and setup in `runbook.md` section 1.
 
 ## Target layout
 
 | Piece | Choice |
 |---|---|
-| GCP project | `tsi-project-cd47e` (confirmed by the user 2026-10-24; already holds Firebase, the Maps/Places/PSI keys and billing) |
-| VM | Shared host `tsi-apps-1`: Compute Engine `e2-medium` (2 shared vCPU, 4 GB), Debian 12, 50 GB balanced disk, zone `asia-south1-a`, static external IPv4. Move to `e2-standard-2` when a second app is added or scans are CPU-starved |
+| GCP project | `your-gcp-project` (confirmed by the user 2026-10-24; already holds Firebase, the Maps/Places/PSI keys and billing) |
+| VM | Shared host `shared-apps-1`: Compute Engine `e2-medium` (2 shared vCPU, 4 GB), Debian 12, 50 GB balanced disk, zone `asia-south1-a`, static external IPv4. Move to `e2-standard-2` when a second app is added or scans are CPU-starved |
 | Runtime | Docker Engine + compose plugin (not Podman). Base `docker-compose.yml` + new `docker-compose.prod.yml` |
 | HTTPS | Shared edge Caddy (`/opt/edge`, not in this repo's compose) on :80/:443, automatic Let's Encrypt certs. This app ships `/opt/edge/sites/seo-audit.caddy` with `reverse_proxy seo-audit-web:3000` over the private network `edge-seo-audit`. Only the edge publishes ports |
 | Images | Built by Cloud Build (`cloudbuild.yaml`), pushed to Artifact Registry `asia-south1-docker.pkg.dev/<project>/seo-audit/{app,moli}`. The VM only pulls; no builds on the VM |
@@ -19,15 +19,14 @@ all apps, each app its own compose project, network, database and Google resourc
 | Secrets | Secret Manager is the source of truth, names prefixed `seo-audit-` and labelled `app=seo-audit`; a deploy script writes `/opt/apps/seo-audit/.env` (mode 600) from it, stripping the prefix |
 | Logs, metrics | Docker json-file logs (VM-wide default in `daemon.json`, rotated) parsed by the Ops Agent → Cloud Logging with `severity`; Ops Agent for memory/disk; Cloud Monitoring uptime check on `/api/health` with an email alert |
 | Backups | Nightly `pg_dump` to a Cloud Storage bucket in asia-south1 (lifecycle: delete after 30 days) + daily disk snapshot schedule (keep 7) |
-| DNS | `audit.thesalesinc.com` A record → the static IP, at whoever hosts thesalesinc.com DNS. If that's Cloudflare, use **DNS only** (grey cloud); proxied mode changes the client IP (see task 8) |
+| DNS | `audit.example.com` A record → the static IP, at whoever hosts example.com DNS. If that's Cloudflare, use **DNS only** (grey cloud); proxied mode changes the client IP (see task 8) |
 
 Rough cost: about $35–45/month (VM ~$25–30, disk, static IP, snapshots; logging within the free tier). Check current pricing.
 
 ## Tasks
 
 1. ✅ **Security headers** (done 2026-10-24, allowlist CSP without nonces; see SPEC.md section 14).
-2. ✅ **`/privacy` page** (done 2026-10-24; 2026-10-25: brand theme + logo like the other pages, host now "Google Cloud
-   (Compute Engine, Mumbai region)").
+2. ⬜ **Privacy page**: built 2026-10-24, removed 2026-10-28 with the old branding; a new one is needed before going live.
 3. ✅ **Production compose** (`docker-compose.prod.yml`): images from Artifact Registry (`${IMAGE_TAG}`), `restart: unless-stopped`
    on every service, memory limits (web ≈ 768 MB, worker ≈ 512 MB, moli ≈ 384 MB, postgres ≈ 512 MB, redis ≈ 192 MB; Docker on
    the VM honours them), web stops publishing :3000 and joins the external network `edge-seo-audit` with alias `seo-audit-web`
@@ -35,7 +34,7 @@ Rough cost: about $35–45/month (VM ~$25–30, disk, static IP, snapshots; logg
    json-file driver (Ops Agent ships it). Compose project name `seo-audit`. Redis `--appendonly yes`. `MOLI_URL=http://moli:9222` and
    `INTERNAL_APP_URL=http://web:3000` stay as in the base file. Postgres gets a real password from `.env`, not `app:app`.
 4. ✅ **Edge site file** (`deploy/seo-audit.caddy`, copied to `/opt/edge/sites/` by the deploy script, then `/opt/edge/up.sh`):
-   `audit.thesalesinc.com { reverse_proxy seo-audit-web:3000 { header_up X-Real-IP {remote_host} } }`, gzip/zstd, and a
+   `audit.example.com { reverse_proxy seo-audit-web:3000 { header_up X-Real-IP {remote_host} } }`, gzip/zstd, and a
    redirect from `www`/the bare IP if needed. HSTS already comes from Next.
 5. ✅ **Cloud Build** (`cloudbuild.yaml`): build the app image with the build args (`NEXT_PUBLIC_GOOGLE_BROWSER_KEY`,
    `NEXT_PUBLIC_TURNSTILE_SITE_KEY`, `NEXT_PUBLIC_FIREBASE_*`, `NEXT_PUBLIC_PHONE_COUNTRIES`, `ONLINE_MODE`) as substitutions, and
@@ -45,8 +44,8 @@ Rough cost: about $35–45/month (VM ~$25–30, disk, static IP, snapshots; logg
    `docker compose up -d`, copy the site file to the edge and run `/opt/edge/up.sh`.
    Migrations keep running in web's start command (`prisma migrate deploy`). Rollback = rerun with the previous SHA.
 7. ✅ **VM bootstrap** (done by hand from `runbook.md` Part A: Docker, edge Caddy, metadata block for containers, swap, Ops Agent).
-   This phase adds the backup cron for this app (`pg_dump | gzip | gcloud storage cp` to `gs://tsi-project-cd47e-seo-audit-backups`).
-   - VM service account `tsi-apps-vm`: Logging Writer and Monitoring Metric Writer project-wide; Artifact Registry Reader on
+   This phase adds the backup cron for this app (`pg_dump | gzip | gcloud storage cp` to `gs://your-gcp-project-seo-audit-backups`).
+   - VM service account `shared-apps-vm`: Logging Writer and Monitoring Metric Writer project-wide; Artifact Registry Reader on
      each app's repo, Secret Accessor on each app's secrets, Storage Object Creator on each app's backup bucket. Not the default compute SA.
    - Firewall: allow tcp:80,443 from anywhere; tcp:22 only from IAP (`35.235.240.0/20`). Nothing else.
 8. ✅ **Client IP** (`getClientIp()` in `src/lib/api.ts`): it currently prefers `X-Real-IP`, which Caddy passes through from the
@@ -80,7 +79,7 @@ Left to build: 14 (e2e), 15 (load test, after deploy), 16 (PostHog, needs a proj
 
 ## Acceptance criteria
 
-- `https://audit.thesalesinc.com` serves the app with a valid certificate; `/api/health` is green; the uptime check passes.
+- `https://audit.example.com` serves the app with a valid certificate; `/api/health` is green; the uptime check passes.
 - Only ports 80 and 443 answer from the internet (5432, 6379, 9222, 3000 closed).
 - `sudo reboot` on the VM: every service comes back on its own and a new scan finishes.
 - A backup restores into an empty Postgres and the restored scan pages render.

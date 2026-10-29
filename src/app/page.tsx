@@ -1,6 +1,6 @@
+import { Logo } from "@/components/brand/Logo";
+import { PaperBackground } from "@/components/brand/PaperBackground";
 import { IntakeForm } from "@/components/intake/IntakeForm";
-import { SalesAsciiBackground } from "@/components/landing/SalesAsciiBackground";
-import { SalesAsciiLogo } from "@/components/landing/SalesAsciiLogo";
 import { CATEGORIES } from "@/lib/categories";
 
 // Static page: ONLINE_MODE is read at build time (Docker build arg), the same value the API reads at runtime.
@@ -10,25 +10,18 @@ export default function Home() {
   return (
     <>
       {/* Here, not in the root layout: the layout also wraps the report print page that becomes the PDF. */}
-      <SalesAsciiBackground />
-      {/* Dark brand theme (globals.css .brand-theme): brand red buttons, translucent panels. */}
-      <main className="dark brand-theme mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-8 px-4 py-16 text-foreground">
-        <SalesAsciiLogo />
+      <PaperBackground />
+      {/* Sketch theme (globals.css .sketch-theme): ink on paper, hand-drawn outlines. */}
+      <main className="sketch-theme mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-8 px-4 py-16 text-foreground">
+        <Logo />
         <div className="flex flex-col gap-3">
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-            SEO audit <span className="font-bold text-primary">powered by TSI</span>
-          </h1>
+          <h1 className="text-4xl tracking-tight sm:text-5xl">Check your business&apos;s SEO</h1>
           <p className="text-muted-foreground">
-            See how your business shows up on Google, how fast your website is, and what to fix first. Takes
+            See how you show up on Google, how fast your website is, and what to fix first. Takes
             about a minute.
           </p>
         </div>
         <IntakeForm categories={CATEGORIES} onlineEnabled={onlineEnabled} />
-        <p className="text-xs text-muted-foreground">
-          <a href="/privacy" className="underline underline-offset-2">
-            Privacy policy
-          </a>
-        </p>
       </main>
     </>
   );

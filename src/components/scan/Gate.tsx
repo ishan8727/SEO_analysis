@@ -8,7 +8,7 @@ import { DotsLoader } from "@/components/loader/DotsLoader";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-// Select popups render in a portal outside the page's dark scope, hence className="dark".
+// Select popups render in a portal outside the page's sketch scope, hence className="sketch-theme".
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { allowedPhoneCountries, isAllowedPhoneCountry, parsePhone } from "@/lib/phone";
 
@@ -188,7 +188,7 @@ export function Gate({
               <SelectTrigger aria-label="Your role" className="w-full">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="dark">
+              <SelectContent className="sketch-theme">
                 {ROLES.map((r) => (
                   <SelectItem key={r.value} value={r.value}>
                     {r.label}
@@ -209,7 +209,7 @@ export function Gate({
                 <SelectTrigger aria-label="Country code" className="w-full sm:w-56">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="dark">
+                <SelectContent className="sketch-theme">
                   {countries.map((c) => (
                     <SelectItem key={c.code} value={c.code}>
                       {c.label}
@@ -243,11 +243,7 @@ export function Gate({
               )}
             </Button>
             <p className="text-xs text-muted-foreground">
-              We&apos;ll text you a 6-digit code. Standard SMS rates may apply. By continuing you agree to our{" "}
-              <a href="/privacy" className="underline underline-offset-2">
-                privacy policy
-              </a>
-              .
+              We&apos;ll text you a 6-digit code. Standard SMS rates may apply.
             </p>
           </form>
         ) : (

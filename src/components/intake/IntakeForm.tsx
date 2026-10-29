@@ -114,8 +114,8 @@ export function IntakeForm({
             <SelectTrigger aria-label="Business category" className="w-full sm:w-72">
               <SelectValue />
             </SelectTrigger>
-            {/* "dark": the popup renders in a portal outside the landing page's dark scope. */}
-            <SelectContent className="dark">
+            {/* "sketch-theme": the popup renders in a portal outside the landing page's sketch scope. */}
+            <SelectContent className="sketch-theme">
               {categories.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.label}

@@ -1,6 +1,6 @@
 # Runbook — production on Google Cloud
 
-Production is one shared Compute Engine VM (`tsi-apps-1`, `asia-south1`) in GCP project `tsi-project-cd47e`. It is built to
+Production is one shared Compute Engine VM (`shared-apps-1`, `asia-south1`) in GCP project `your-gcp-project`. It is built to
 host several apps (decided 2026-10-26; see `phases/phase-6.md`). Local development is in `setup.md`.
 
 How the VM is laid out:
@@ -22,12 +22,12 @@ Sections 2–6 (deploy, rollback, key rotation, restore, ops) arrive with the Ph
 
 ## 1. One-time GCP setup
 
-Run everything in **Cloud Shell** (console.cloud.google.com → project `tsi-project-cd47e` → `>_` at the top right). It has
+Run everything in **Cloud Shell** (console.cloud.google.com → project `your-gcp-project` → `>_` at the top right). It has
 `gcloud` and bash built in. Sign in as an Owner of the project. **Part A** is once per VM. **Part B** is once per app; do it
 now for `seo-audit` and repeat it for each new app.
 
 **Automated:** `scripts/gcp/setup.sh` runs Parts A and B for `seo-audit` in one go and `scripts/gcp/vm-bootstrap.sh` does the
-VM side (setup.sh copies it over). Put both in one folder in Cloud Shell and run `bash setup.sh`. It asks for
+VM side (setup.sh copies it over). Put both in one folder in Cloud Shell and run `GCP_PROJECT=<project id> APP_DOMAIN=<domain> bash setup.sh`. It asks for
 TURNSTILE_SECRET and GEMINI_API_KEY first, skips anything that already exists (safe to rerun after a failure), waits
 for SSH, and ends with the DNS record to add. DNS and the budget alert stay manual. The steps below are the same thing
 by hand.
@@ -39,13 +39,13 @@ by hand.
 Paste again whenever Cloud Shell restarts.
 
 ```bash
-gcloud config set project tsi-project-cd47e
-PROJECT=tsi-project-cd47e
+gcloud config set project your-gcp-project
+PROJECT=your-gcp-project
 REGION=asia-south1
 ZONE=asia-south1-a
-VM=tsi-apps-1
-TAG=tsi-apps
-SA=tsi-apps-vm@$PROJECT.iam.gserviceaccount.com
+VM=shared-apps-1
+TAG=shared-apps
+SA=shared-apps-vm@$PROJECT.iam.gserviceaccount.com
 ```
 
 #### A2. APIs
@@ -61,7 +61,7 @@ gcloud services enable compute.googleapis.com artifactregistry.googleapis.com cl
 It gets only log and metric writing project-wide. Registry, secret and bucket access is granted per app in Part B.
 
 ```bash
-gcloud iam service-accounts create tsi-apps-vm --display-name="Shared apps VM"
+gcloud iam service-accounts create shared-apps-vm --display-name="Shared apps VM"
 for ROLE in roles/logging.logWriter roles/monitoring.metricWriter; do
   gcloud projects add-iam-policy-binding $PROJECT --member="serviceAccount:$SA" --role=$ROLE --condition=None --quiet >/dev/null
 done
@@ -70,8 +70,8 @@ done
 #### A4. Static IP
 
 ```bash
-gcloud compute addresses create tsi-apps-ip --region=$REGION
-IP=$(gcloud compute addresses describe tsi-apps-ip --region=$REGION --format='value(address)'); echo $IP
+gcloud compute addresses create shared-apps-ip --region=$REGION
+IP=$(gcloud compute addresses describe shared-apps-ip --region=$REGION --format='value(address)'); echo $IP
 ```
 
 Write the IP down. Every app's DNS record points at it.
@@ -79,9 +79,9 @@ Write the IP down. Every app's DNS record points at it.
 #### A5. Firewall: web open, SSH only through IAP
 
 ```bash
-gcloud compute firewall-rules create tsi-apps-allow-web --network=default --direction=INGRESS \
+gcloud compute firewall-rules create shared-apps-allow-web --network=default --direction=INGRESS \
   --action=ALLOW --rules=tcp:80,tcp:443,udp:443 --source-ranges=0.0.0.0/0 --target-tags=$TAG
-gcloud compute firewall-rules create tsi-apps-allow-iap-ssh --network=default --direction=INGRESS \
+gcloud compute firewall-rules create shared-apps-allow-iap-ssh --network=default --direction=INGRESS \
   --action=ALLOW --rules=tcp:22 --source-ranges=35.235.240.0/20 --target-tags=$TAG
 # Google's default rules open SSH/RDP to the whole internet. Remove them (ignore "not found"):
 gcloud compute firewall-rules delete default-allow-ssh default-allow-rdp --quiet
@@ -99,7 +99,7 @@ images and databases.
 gcloud compute instances create $VM --zone=$ZONE --machine-type=e2-medium \
   --image-family=debian-12 --image-project=debian-cloud \
   --boot-disk-size=50GB --boot-disk-type=pd-balanced \
-  --address=tsi-apps-ip --tags=$TAG \
+  --address=shared-apps-ip --tags=$TAG \
   --service-account=$SA --scopes=cloud-platform \
   --shielded-secure-boot --shielded-vtpm --shielded-integrity-monitoring \
   --metadata=enable-oslogin=TRUE
@@ -110,9 +110,9 @@ gcloud compute instances create $VM --zone=$ZONE --machine-type=e2-medium \
 21:00 UTC = 02:30 IST.
 
 ```bash
-gcloud compute resource-policies create snapshot-schedule tsi-apps-daily --region=$REGION \
+gcloud compute resource-policies create snapshot-schedule shared-apps-daily --region=$REGION \
   --daily-schedule --start-time=21:00 --max-retention-days=7 --on-source-disk-delete=keep-auto-snapshots
-gcloud compute disks add-resource-policies $VM --zone=$ZONE --resource-policies=tsi-apps-daily
+gcloud compute disks add-resource-policies $VM --zone=$ZONE --resource-policies=shared-apps-daily
 ```
 
 #### A8. VM bootstrap
@@ -123,7 +123,7 @@ Wait about a minute after A6 so the VM has booted, then connect:
 gcloud compute ssh $VM --zone=$ZONE --tunnel-through-iap
 ```
 
-**Check the prompt before pasting anything: it must end in `@tsi-apps-1:~$`.** If it still says `cloudshell`, the connection
+**Check the prompt before pasting anything: it must end in `@shared-apps-1:~$`.** If it still says `cloudshell`, the connection
 failed. `failed to connect to backend` usually means the VM is still booting: wait and retry, or add `--troubleshoot`.
 These blocks run in Cloud Shell by mistake fail harmlessly (Cloud Shell → ⋮ → Restart undoes them).
 
@@ -198,7 +198,7 @@ volumes:
 EOF
 cat > /opt/edge/Caddyfile <<'EOF'
 {
-	email grow@thesalesinc.com
+	email you@example.com
 }
 import sites/*.caddy
 EOF
@@ -234,11 +234,11 @@ curl -s -m 5 -H "Metadata-Flavor: Google" http://169.254.169.254/computeMetadata
 ```
 
 Expected: "Hello from Docker!", a compose version, about 2 GB swap, `log driver: json-file`, "metadata blocked for containers:
-ok", and `tsi-apps-1 <- host still reaches metadata`.
+ok", and `shared-apps-1 <- host still reaches metadata`.
 
 #### A9. Budget alert
 
-Console → **Billing → Budgets & alerts → Create budget**: scope project `tsi-project-cd47e`, a monthly amount (e.g. ₹5,000),
+Console → **Billing → Budgets & alerts → Create budget**: scope project `your-gcp-project`, a monthly amount (e.g. ₹5,000),
 alerts at 50 %, 90 % and 100 %.
 
 #### A10. Later: resize when adding an app
@@ -260,9 +260,9 @@ Paste after A1 whenever Cloud Shell restarts. For another app, change `APP` (low
 
 ```bash
 APP=seo-audit
-DOMAIN=audit.thesalesinc.com
+DOMAIN=audit.example.com
 BUCKET=gs://$PROJECT-$APP-backups
-IP=$(gcloud compute addresses describe tsi-apps-ip --region=$REGION --format='value(address)'); echo $IP
+IP=$(gcloud compute addresses describe shared-apps-ip --region=$REGION --format='value(address)'); echo $IP
 ```
 
 #### B2. APIs this app calls
@@ -337,7 +337,7 @@ gcloud secrets add-iam-policy-binding $APP-GOOGLE_SERVER_KEY --member="serviceAc
 
 #### B7. DNS
 
-At the DNS host for the domain: **A record** for `$DOMAIN` (for seo-audit: name `audit` on thesalesinc.com) → the IP from A4,
+At the DNS host for the domain: **A record** for `$DOMAIN` (for seo-audit: name `audit` on example.com) → the IP from A4,
 TTL 300. **On Cloudflare, set it to "DNS only" (grey cloud)**: proxied mode changes the client IP the app sees (phase-6.md
 task 8). Check:
 
@@ -360,8 +360,8 @@ Expected: the last line prints `edge-caddy-1`. The app's Caddy site file (`/opt/
 
 #### B9. Done when
 
-- `gcloud compute instances list` shows `tsi-apps-1` RUNNING with the static IP.
-- `dig +short audit.thesalesinc.com` returns that IP.
+- `gcloud compute instances list` shows `shared-apps-1` RUNNING with the static IP.
+- `dig +short audit.example.com` returns that IP.
 - `gcloud secrets list --filter=labels.app=seo-audit` shows 8 secrets: `seo-audit-` + HASH_SALT, COOKIE_SECRET,
   INTERNAL_TOKEN, MOLI_TOKEN, POSTGRES_PASSWORD, TURNSTILE_SECRET, GEMINI_API_KEY, GOOGLE_SERVER_KEY.
 - `curl -I http://<IP>` from outside is refused (Caddy has no sites until the Phase 6 deploy). Port 22 from outside times out.
@@ -377,7 +377,7 @@ Expected: the last line prints `edge-caddy-1`. The app's Caddy site file (`/opt/
 ## 2. Deploy, roll back
 
 Everything runs from **Git Bash in the project folder** (or Cloud Shell with the repo), signed in to gcloud as a
-project Owner. On the VM, this shortcut saves typing (paste it after `gcloud compute ssh tsi-apps-1
+project Owner. On the VM, this shortcut saves typing (paste it after `gcloud compute ssh shared-apps-1
 --zone=asia-south1-a --tunnel-through-iap`):
 
 ```bash
@@ -397,6 +397,7 @@ missing.
 
 Work on a branch, merge it into `main`, push, deploy from `main`. The deploy script builds only a clean `main` that matches
 GitHub's (`ALLOW_BRANCH=1 bash scripts/deploy.sh` skips that check for an urgent fix; merge it afterwards).
+The deploy script needs `GCP_PROJECT` set to the project id (e.g. `export GCP_PROJECT=my-project` once per terminal).
 
 ```bash
 git checkout -b my-change            # 1. new branch for the change
@@ -415,7 +416,7 @@ bash scripts/deploy.sh               # 4. build main's newest commit and put it 
    - Cloud Build builds `app` and `moli` (about 10 minutes) and pushes them to Artifact Registry as `<commit>` and `latest`.
    - The VM writes `/opt/apps/seo-audit/.env` from `deploy/seo-audit.env` + the `seo-audit-*` secrets, pulls, restarts
      (migrations run when web starts), reloads the edge Caddy, installs the backup timer and waits for `/api/health`.
-3. Check: `curl https://audit.thesalesinc.com/api/health` → `{"db":"ok","redis":"ok","moli":"ok"}`.
+3. Check: `curl https://audit.example.com/api/health` → `{"db":"ok","redis":"ok","moli":"ok"}`.
 
 Settings: non-secret ones live in `deploy/seo-audit.env` (commit + deploy), build values in `.env.deploy` (deploy rebuilds),
 secrets in Secret Manager (section 3).
@@ -423,7 +424,7 @@ secrets in Secret Manager (section 3).
 ### Roll back
 
 ```bash
-gcloud artifacts docker tags list asia-south1-docker.pkg.dev/tsi-project-cd47e/seo-audit/app --sort-by=~UPDATE_TIME --limit=10
+gcloud artifacts docker tags list asia-south1-docker.pkg.dev/your-gcp-project/seo-audit/app --sort-by=~UPDATE_TIME --limit=10
 bash scripts/deploy.sh <tag>      # no rebuild: deploys the images already built for that commit
 ```
 
@@ -433,7 +434,7 @@ migrations, otherwise restore the backup from before the deploy (section 4).
 ### See what's running
 
 ```bash
-gcloud compute ssh tsi-apps-1 --zone=asia-south1-a --tunnel-through-iap --command="sudo docker ps --format '{{.Names}}  {{.Status}}'; sudo grep IMAGE_TAG /opt/apps/seo-audit/.env"
+gcloud compute ssh shared-apps-1 --zone=asia-south1-a --tunnel-through-iap --command="sudo docker ps --format '{{.Names}}  {{.Status}}'; sudo grep IMAGE_TAG /opt/apps/seo-audit/.env"
 ```
 
 ## 3. Secrets and keys
@@ -463,7 +464,7 @@ read -rsp "Make.com webhook URL: " V; echo
 printf '%s' "$V" | gcloud secrets create seo-audit-LEAD_WEBHOOK_URL --replication-policy=user-managed \
   --locations=asia-south1 --labels=app=seo-audit --data-file=-; unset V
 gcloud secrets add-iam-policy-binding seo-audit-LEAD_WEBHOOK_URL --role=roles/secretmanager.secretAccessor \
-  --member=serviceAccount:tsi-apps-vm@tsi-project-cd47e.iam.gserviceaccount.com
+  --member=serviceAccount:shared-apps-vm@your-gcp-project.iam.gserviceaccount.com
 bash scripts/deploy.sh <current tag>
 ```
 
@@ -478,18 +479,18 @@ done
 
 ## 4. Back up and restore
 
-- **Nightly** at 02:00 IST: `pg_dump` (custom format) to `gs://tsi-project-cd47e-seo-audit-backups/postgres/`, kept 30 days.
+- **Nightly** at 02:00 IST: `pg_dump` (custom format) to `gs://your-gcp-project-seo-audit-backups/postgres/`, kept 30 days.
   Run one now on the VM: `sudo systemctl start seo-audit-backup && journalctl -u seo-audit-backup -n 5`.
 - **Disk snapshots**: daily at 02:30 IST, kept 7 days (Compute Engine → Snapshots).
 - List backups (from your PC; the VM itself can't read the bucket):
-  `gcloud storage ls -l gs://tsi-project-cd47e-seo-audit-backups/postgres/`
+  `gcloud storage ls -l gs://your-gcp-project-seo-audit-backups/postgres/`
 
 **Restore** (replaces the current data):
 
 ```bash
 # On your PC: fetch the dump and copy it to the VM
-gcloud storage cp gs://tsi-project-cd47e-seo-audit-backups/postgres/<file>.dump restore.dump
-gcloud compute scp restore.dump tsi-apps-1:restore.dump --zone=asia-south1-a --tunnel-through-iap
+gcloud storage cp gs://your-gcp-project-seo-audit-backups/postgres/<file>.dump restore.dump
+gcloud compute scp restore.dump shared-apps-1:restore.dump --zone=asia-south1-a --tunnel-through-iap
 # On the VM (with dc() from section 2)
 dc stop web worker
 dc exec -T postgres pg_restore -U app -d seoaudit --clean --if-exists --no-owner < restore.dump
@@ -520,9 +521,9 @@ and screenshots are cleared by the nightly retention job (21:30 UTC) without hel
 ## 6. Logs, metrics, resizing
 
 - **Logs Explorer** (console → Logging), app logs carry `severity`:
-  `logName="projects/tsi-project-cd47e/logs/docker" jsonPayload.service="worker" severity>=WARNING`
-  From your PC: `gcloud logging read 'logName="projects/tsi-project-cd47e/logs/docker" AND severity>=ERROR' --freshness=1d --limit=20`
+  `logName="projects/your-gcp-project/logs/docker" jsonPayload.service="worker" severity>=WARNING`
+  From your PC: `gcloud logging read 'logName="projects/your-gcp-project/logs/docker" AND severity>=ERROR' --freshness=1d --limit=20`
 - **Live on the VM**: `dc logs -f --tail=100 web worker`; memory per container: `sudo docker stats --no-stream`.
-- **Metrics**: Compute Engine → `tsi-apps-1` → Observability (CPU, memory and disk come from the Ops Agent).
-- **Uptime check** on `https://audit.thesalesinc.com/api/health` with an email alert: Monitoring → Uptime checks.
+- **Metrics**: Compute Engine → `shared-apps-1` → Observability (CPU, memory and disk come from the Ops Agent).
+- **Uptime check** on `https://audit.example.com/api/health` with an email alert: Monitoring → Uptime checks.
 - **Resize**: section A10. Memory limits per service are in `docker-compose.prod.yml` (about 2.4 GB in total for seo-audit).

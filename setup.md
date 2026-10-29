@@ -21,8 +21,8 @@ browser (Moli). If you use Docker instead, replace `podman compose` with `docker
 ## 2. Get the code and packages (once)
 
 ```powershell
-git clone https://github.com/ishanchaudhary-eng/TSI_Business_Analyzer.git
-cd TSI_Business_Analyzer\project
+git clone https://github.com/ishan8727/SEO_analysis.git
+cd SEO_analysis
 pnpm install
 pnpm db:generate
 ```
@@ -43,9 +43,9 @@ Fill these in. Everything not listed can stay as it is.
 | `GOOGLE_SERVER_KEY`, `PSI_API_KEY` | Google server key (Places + PageSpeed). `PSI_API_KEY` can be the same key. |
 | `GEMINI_API_KEY` | From Google AI Studio (review analysis). |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` / `TURNSTILE_SECRET` | For your PC use Cloudflare's invisible test keys (always pass, nothing shown):<br/>`1x00000000000000000000BB` / `1x0000000000000000000000000000000AA` |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase web app API key (project `tsi-project-cd47e`). |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `tsi-project-cd47e.firebaseapp.com` |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `FIREBASE_PROJECT_ID` | `tsi-project-cd47e` |
+| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase web app API key (project `your-gcp-project`). |
+| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | `your-gcp-project.firebaseapp.com` |
+| `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `FIREBASE_PROJECT_ID` | `your-gcp-project` |
 | `NEXT_PUBLIC_PHONE_COUNTRIES` | Same country list as Firebase's SMS region policy, e.g. `IN,US,GB,AE,AU,CA` |
 
 No Google or Gemini keys yet? You can still see the whole UI with demo data (step 5).
@@ -120,19 +120,19 @@ Other demo modes: `pnpm seed:demo --live` (watch a scan "run" step by step) and 
 3. Press **Text me a code**. reCAPTCHA may show a picture puzzle first.
 4. Enter the code and press **Unlock my report**. You go to the full report.
 
-**Test the unlock on `dev.thesalesinc.com`, not `localhost`.** Firebase rejects phone sign-in from
+**Test the unlock on `dev.example.com`, not `localhost`.** Firebase rejects phone sign-in from
 `localhost` with "We couldn't check you're human…" (Firebase bug
 [#8387](https://github.com/firebase/firebase-js-sdk/issues/8387)), even with the test number. Once per PC,
 in PowerShell **as Administrator**:
 
 ```powershell
-Add-Content C:\Windows\System32\drivers\etc\hosts "127.0.0.1 dev.thesalesinc.com"
+Add-Content C:\Windows\System32\drivers\etc\hosts "127.0.0.1 dev.example.com"
 ```
 
-Then open the scan at **http://dev.thesalesinc.com:3000/scan/...** (same app, just another name for this
+Then open the scan at **http://dev.example.com:3000/scan/...** (same app, just another name for this
 PC). Firebase's authorized domains and its browser key already allow it. For the search box and the
-Turnstile check to work there too, add `http://dev.thesalesinc.com:3000/*` to the Maps browser key and
-`dev.thesalesinc.com` to the Turnstile widget's hostnames. An unlock on one name doesn't carry over to the
+Turnstile check to work there too, add `http://dev.example.com:3000/*` to the Maps browser key and
+`dev.example.com` to the Turnstile widget's hostnames. An unlock on one name doesn't carry over to the
 other (the cookie belongs to the name).
 
 ## 6. Stop it

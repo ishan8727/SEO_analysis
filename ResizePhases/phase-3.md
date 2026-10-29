@@ -59,7 +59,7 @@ Read `node_modules/next/dist/docs/` on client components and `cookies()` before 
      (secrets loop).
    - `/api/health` returns `{ db, jobs }`.
    - `next.config.ts`: remove `playwright-core` from `serverExternalPackages`. Move `playwright-core` to
-     `devDependencies`; `scripts/make-logo-animation.ts` still uses it with local Edge.
+     `devDependencies`, or drop it if no script uses it any more.
    - CSP in `src/lib/security-headers.ts`: nothing Moli-specific is expected, but check.
 8. **Scripts and fixtures.** `scripts/seed-demo.ts` no longer queues a PDF and writes `renderer: "fetch"`.
    `scripts/start-app.ts` doesn't start `moli`.
@@ -77,7 +77,6 @@ Read `node_modules/next/dist/docs/` on client components and `cookies()` before 
 - `runbook.md`: secrets list. `seo-audit-MOLI_TOKEN` and `seo-audit-INTERNAL_TOKEN` are no longer read and can be deleted
   in Phase 5. Part B steps.
 - `phases/phase-5.md`: one line saying the PDF path changed in ResizePhases/phase-3.
-- `/privacy`: "To build your audit report and the PDF" stays true (the browser makes the PDF). Check nothing names Moli.
 - `CLAUDE.md`: drop the Moli hard rule (`withPage()`, `assertPublicUrl` before Moli navigates); keep `safeFetch`. Drop
   `MOLI_TOKEN` and `INTERNAL_TOKEN` from the server-only list and the `moli:smoke` / `pdf:smoke` commands. Drop
   "Screenshots and PDFs go in the Asset table" down to screenshots.

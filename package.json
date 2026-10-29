@@ -1,5 +1,5 @@
 {
-  "name": "local-seo-audit",
+  "name": "seo-audit",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -26,8 +26,7 @@
     "seed:demo": "tsx --env-file-if-exists=.env scripts/seed-demo.ts",
     "pdf:smoke": "tsx --env-file-if-exists=.env scripts/pdf-smoke.ts",
     "lead:test": "tsx --env-file-if-exists=.env scripts/lead-webhook-test.ts",
-    "logo:build": "tsx scripts/make-logo-animation.ts",
-    "ascii:frames": "tsx scripts/make-ascii-frames.ts"
+    "icons:build": "tsx scripts/make-icons.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -71,7 +70,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.2",
-    "node-webpmux": "^3.2.1",
+    "sharp": "0.35.5",
     "tailwindcss": "^4",
     "tsup": "^9.0.0",
     "tsx": "^4.23.15",

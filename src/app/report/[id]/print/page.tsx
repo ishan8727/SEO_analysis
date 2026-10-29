@@ -7,6 +7,7 @@ import { env } from "@/lib/env";
 import { safeEqual } from "@/lib/hash";
 import { INTERNAL_TOKEN_HEADER } from "@/lib/print-html";
 import { loadScanRow, SCAN_ID_RE, toReport } from "@/lib/scan-view";
+import { SITE_NAME } from "@/lib/site";
 
 // PDF source: the full report for the worker's PDF job (src/worker/jobs/pdf.ts), which fetches
 // this page over the private network and prints it on Moli. INTERNAL_TOKEN comes in the
@@ -35,7 +36,7 @@ export default async function PrintPage({ params }: PageProps<"/report/[id]/prin
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
       <header className="flex flex-col gap-1">
-        <p className="text-sm text-muted-foreground">SEO audit by TSI · {new Date().toISOString().slice(0, 10)}</p>
+        <p className="text-sm text-muted-foreground">{SITE_NAME} · {new Date().toISOString().slice(0, 10)}</p>
         <h1 className="text-2xl font-semibold tracking-tight break-words">{name}</h1>
         {(address || websiteUrl) && (
           <p className="text-sm break-words text-muted-foreground">{[address, websiteUrl].filter(Boolean).join(" · ")}</p>

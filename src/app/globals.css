@@ -128,81 +128,159 @@
     @apply font-sans;
   }
 }
-/* ASCII background (src/components/landing/SalesAsciiBackground.tsx). */
-/* Cursor spotlight: a 400px glow moved with transform from the pointer (no repaint, no blend). */
-.ascii-spot {
-  width: 400px;
-  height: 400px;
-  border-radius: 9999px;
-  background: radial-gradient(circle closest-side, rgb(255 255 255 / 6%), rgb(251 43 47 / 4%) 64%, transparent);
+/* Sketch theme: ink on paper, hand-drawn edges. Scoped with .sketch-theme (landing, scan and report pages,
+   and popups portaled out of them); the print page (the PDF) renders without it, so it stays plain white. */
+.sketch-theme {
+  --paper: #f4ece1;
+  --ink: #1f1b17;
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #fbf7f0;
+  --card-foreground: var(--ink);
+  --popover: #fbf7f0;
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--paper);
+  --secondary: #ebe1d3;
+  --secondary-foreground: var(--ink);
+  --muted: #ebe1d3;
+  --muted-foreground: #5c5349;
+  --accent: #e6dac9;
+  --accent-foreground: var(--ink);
+  --border: rgb(31 27 23 / 0.7);
+  --input: rgb(31 27 23 / 0.55);
+  --ring: rgb(31 27 23 / 0.6);
+  --font-heading: var(--font-hand);
+  color-scheme: light;
 }
-.ascii-bg-overlay {
-  background:
-    repeating-linear-gradient(to bottom, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
-    radial-gradient(ellipse 45% 40% at 50% 50%, rgb(0 0 0 / 75%), transparent),
-    radial-gradient(ellipse at center, transparent 65%, rgb(0 0 0 / 70%));
+.sketch-theme h1,
+.sketch-theme h2 {
+  font-family: var(--font-hand);
+  font-weight: 700;
 }
-/* Phones see only the left of the art (its calm centre is off-screen): darken behind the whole column. */
-@media (max-width: 639px) {
-  .ascii-bg-overlay {
-    background:
-      repeating-linear-gradient(to bottom, rgb(255 255 255 / 4%) 0 1px, transparent 1px 3px),
-      radial-gradient(ellipse 85% 42% at 50% 50%, rgb(0 0 0 / 88%) 40%, transparent),
-      radial-gradient(ellipse at center, transparent 65%, rgb(0 0 0 / 70%));
-  }
+/* Wobbly hand-drawn outlines: uneven corner radii and a small offset ink shadow. */
+.sketch-theme [data-slot="card"] {
+  border: 2px solid var(--ink);
+  border-radius: 18px 6px 20px 8px / 8px 20px 6px 18px;
+  box-shadow: 3px 4px 0 rgb(31 27 23 / 0.85);
+  --tw-ring-shadow: 0 0 #0000;
+}
+.sketch-theme [data-slot="card-title"] {
+  font-family: var(--font-hand);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+/* Buttons (ui/button.tsx marks them sketch-btn; filled and outline ones also sketch-btn-line). */
+.sketch-theme .sketch-btn {
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+}
+.sketch-theme .sketch-btn-line {
+  border: 2px solid var(--ink);
+}
+.sketch-theme :is([data-slot="input"], [data-slot="select-trigger"], [data-slot="textarea"]) {
+  border-width: 1.5px;
+  border-radius: 10px 4px 12px 5px / 5px 12px 4px 10px;
+  background-color: rgb(255 255 255 / 0.55);
 }
 
-/* Dark brand scope for the landing and scan pages, used together with `dark` (after `.dark`, so it
-   wins). Cards become translucent black panels over the ASCII background. */
-.brand-theme {
-  --primary: #FB2B2F;
-  --primary-foreground: #ffffff;
-  --ring: #FB2B2F;
-  --card: rgb(0 0 0 / 60%);
-  --border: rgb(255 255 255 / 10%);
-  --muted-foreground: rgb(255 255 255 / 80%);
-  color-scheme: dark;
+/* Paper background (src/components/brand/PaperBackground.tsx): paper colour plus a faint grain. */
+.paper-bg {
+  background-color: #f4ece1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .12 0 0 0 0 .1 0 0 0 0 .08 .14 0 0 0 -.03'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
-.brand-theme [data-slot="card"] {
-  backdrop-filter: blur(4px);
+/* Sketch pages: paper behind everything, so overscroll and tall pages never flash white. */
+body:has(.sketch-theme) {
+  background-color: #f4ece1;
 }
 
-/* Loading states in the brand scope: skeletons become a dot grid with a red sweep (ASCII feel).
-   The sweep is a pseudo-element moved with translate, so it animates on the GPU without repaints. */
-.brand-theme [data-slot="skeleton"] {
+/* Logo (src/components/brand/Logo.tsx): letters pop in, then the pencil strokes draw themselves.
+   Strokes use pathLength="1", so a dash of 1 is the whole stroke. Hover: a wiggle, the lens tilts. */
+.logo-pop {
+  animation: logo-pop 0.45s cubic-bezier(0.3, 1.4, 0.5, 1) backwards;
+  animation-delay: var(--d, 0s);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+@keyframes logo-pop {
+  from { opacity: 0; scale: 0.85; rotate: -4deg; }
+}
+.logo-draw {
+  stroke-dasharray: 1;
+  animation: logo-draw 0.5s ease-out backwards;
+  animation-delay: var(--d, 0s);
+}
+@keyframes logo-draw {
+  from { stroke-dashoffset: 1; }
+}
+.logo-art {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: rotate 0.3s cubic-bezier(0.3, 1.6, 0.5, 1);
+}
+.logo-lens {
+  transform-box: fill-box;
+  transform-origin: 35% 35%;
+  transition: rotate 0.3s cubic-bezier(0.3, 1.6, 0.5, 1), translate 0.3s ease-out;
+}
+.group:hover .logo-art, .group:active .logo-art { rotate: -2deg; }
+.group:hover .logo-lens, .group:active .logo-lens { rotate: -12deg; translate: 2px -2px; }
+
+/* Scan loader (src/components/loader/SketchLoader.tsx): the magnifier sweeps the scribbled lines. */
+.loader-lens {
+  animation: loader-lens 2.4s ease-in-out infinite;
+}
+@keyframes loader-lens {
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  25% { translate: 110px 14px; rotate: 8deg; }
+  50% { translate: 40px 40px; rotate: -4deg; }
+  75% { translate: 130px 52px; rotate: 6deg; }
+}
+.loader-line {
+  stroke-dasharray: 1;
+  animation: loader-line 2.4s ease-in-out infinite;
+  animation-delay: var(--d, 0s);
+}
+@keyframes loader-line {
+  0% { stroke-dashoffset: 1; }
+  45%, 80% { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -1; }
+}
+
+/* Loading states: skeletons become pencil hatching with a soft sweep. The sweep is a pseudo-element
+   moved with translate, so it animates on the GPU without repaints. */
+.sketch-theme [data-slot="skeleton"] {
   position: relative;
   overflow: hidden;
   animation: none;
-  background:
-    radial-gradient(circle, rgb(255 255 255 / 14%) 1px, transparent 1.5px) 0 0 / 8px 8px,
-    rgb(255 255 255 / 4%);
+  border: 1.5px dashed rgb(31 27 23 / 0.35);
+  background: repeating-linear-gradient(-50deg, rgb(31 27 23 / 0.09) 0 1.5px, transparent 1.5px 7px);
 }
-.brand-theme [data-slot="skeleton"]::after {
+.sketch-theme [data-slot="skeleton"]::after {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
   width: 50%;
-  background: linear-gradient(90deg, transparent, rgb(251 43 47 / 16%), transparent);
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
   translate: -100% 0;
-  animation: brand-sweep 1.6s linear infinite;
+  animation: sketch-sweep 1.6s linear infinite;
 }
-@keyframes brand-sweep {
+@keyframes sketch-sweep {
   to { translate: 200% 0; }
 }
 /* DotsLoader: src/components/loader/DotsLoader.tsx */
-.brand-dot { animation: brand-dot 0.9s ease-in-out infinite; }
-@keyframes brand-dot {
+.ink-dot { animation: ink-dot 0.9s ease-in-out infinite; }
+@keyframes ink-dot {
   0%, 100% { opacity: 0.3; translate: 0 0; }
   50% { opacity: 1; translate: 0 -2px; }
 }
-/* Phone gate while a code is being sent or checked: a faint red scan line sweeps the card. */
+/* Phone gate while a code is being sent or checked: a faint pencil band sweeps the card. */
 .gate-card[data-busy]::before {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
   height: 35%;
   pointer-events: none;
-  background: linear-gradient(180deg, transparent, rgb(251 43 47 / 10%) 50%, transparent);
+  background: linear-gradient(180deg, transparent, rgb(31 27 23 / 0.07) 50%, transparent);
   translate: 0 -100%;
   animation: gate-scan 1.6s ease-in-out infinite;
 }
@@ -240,25 +318,20 @@
   from { opacity: 0; scale: 0.9; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .brand-theme [data-slot="skeleton"]::after, .brand-dot, .gate-card[data-busy]::before { animation: none; }
+  .sketch-theme [data-slot="skeleton"]::after, .ink-dot, .gate-card[data-busy]::before { animation: none; }
   .wall-in, .wall-ring, .wall-bar, .wall-lock { animation: none; }
+  .logo-pop, .logo-draw, .loader-lens, .loader-line { animation: none; }
 }
-/* Report map in the brand scope: OSM tiles turned dark, quieter attribution. */
-.brand-theme .leaflet-tile-pane {
-  filter: invert(1) hue-rotate(180deg) brightness(0.85) contrast(0.9);
+/* Report map in the sketch scope: OSM tiles warmed toward the paper, quieter attribution. */
+.sketch-theme .leaflet-tile-pane {
+  filter: sepia(0.35) saturate(0.75) contrast(0.95);
 }
-.brand-theme .leaflet-control-attribution {
-  background: rgb(0 0 0 / 60%);
-  color: rgb(255 255 255 / 70%);
+.sketch-theme .leaflet-control-attribution {
+  background: rgb(244 236 225 / 0.85);
+  color: #5c5349;
 }
-.brand-theme .leaflet-control-attribution a { color: rgb(255 255 255 / 85%); }
-.brand-theme .leaflet-tooltip {
-  background: #000;
-  border-color: rgb(255 255 255 / 15%);
-  color: #fff;
-}
-.brand-theme .leaflet-tooltip-top::before { border-top-color: #000; }
-/* Dark brand pages: black behind everything, so overscroll and tall pages never flash white. */
-body:has(.brand-theme) {
-  background-color: #000;
+.sketch-theme .leaflet-tooltip {
+  background: #fbf7f0;
+  border: 1.5px solid #1f1b17;
+  color: #1f1b17;
 }
